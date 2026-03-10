@@ -52,6 +52,7 @@ export const PrefixConverterWidget: React.FC = () => {
   const [task, setTask] = useState<{ from: PrefixDef; to: PrefixDef; value: number; unit: string } | null>(null);
   const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [unpackState, setUnpackState] = useState<'idle' | 'expanded' | 'calculated'>('idle');
 
   const getFullUnitName = (prefixName: string, unitCode: string) => {
     const baseNames: Record<string, string> = {
@@ -62,6 +63,45 @@ export const PrefixConverterWidget: React.FC = () => {
     const base = baseNames[unitCode] || unitCode;
     if (prefixName === 'Grund') return base;
     return prefixName.toLowerCase() + base;
+  };
+
+  const unpackTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (unpackTimeoutRef.current) clearTimeout(unpackTimeoutRef.current);
+    };
+  }, []);
+
+  const handleUnpack = () => {
+    if (currentPrefix.power === 0) return;
+
+    if (unpackState === 'idle') {
+      setUnpackState('expanded');
+      
+      unpackTimeoutRef.current = setTimeout(() => {
+        setUnpackState('calculated');
+        unpackTimeoutRef.current = setTimeout(() => {
+          const multiplier = Math.pow(10, currentPrefix.power);
+          const newValue = Number((value * multiplier).toFixed(10));
+          setValue(newValue);
+          setInputValue(newValue.toString());
+          setCurrentPrefix(PREFIXES.find(p => p.power === 0)!);
+          setUnpackState('idle');
+        }, 1000);
+      }, 1500);
+    } else if (unpackState === 'expanded') {
+      if (unpackTimeoutRef.current) clearTimeout(unpackTimeoutRef.current);
+      setUnpackState('calculated');
+      unpackTimeoutRef.current = setTimeout(() => {
+        const multiplier = Math.pow(10, currentPrefix.power);
+        const newValue = Number((value * multiplier).toFixed(10));
+        setValue(newValue);
+        setInputValue(newValue.toString());
+        setCurrentPrefix(PREFIXES.find(p => p.power === 0)!);
+        setUnpackState('idle');
+      }, 1000);
+    }
   };
 
   const generateTask = () => {
@@ -238,50 +278,102 @@ export const PrefixConverterWidget: React.FC = () => {
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">Aktuellt Värde</span>
               
               <div className="flex flex-col items-center gap-4 w-full">
-                <div className="flex items-center justify-center gap-6 w-full">
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100 mb-2">
-                       <button 
-                        onClick={() => {
-                          const newVal = Math.max(0, value - 1);
-                          setValue(newVal);
-                          setInputValue(newVal.toString());
-                        }}
-                        className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
+                <div className="flex items-center justify-center gap-6 w-full min-h-[120px]">
+                  <AnimatePresence mode="wait">
+                    {unpackState === 'idle' ? (
+                      <motion.div 
+                        key="idle"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.1 }}
+                        className="flex items-center gap-6"
                       >
-                        <Icons.Minus size={20} />
-                      </button>
-                      <input 
-                        type="text" 
-                        value={inputValue}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(',', '.');
-                          setInputValue(val);
-                          const parsed = parseFloat(val);
-                          if (!isNaN(parsed)) setValue(parsed);
-                        }}
-                        onBlur={() => setInputValue(value.toString())}
-                        className="w-40 bg-transparent text-center font-black text-4xl outline-none text-slate-800"
-                      />
-                      <button 
-                        onClick={() => {
-                          const newVal = value + 1;
-                          setValue(newVal);
-                          setInputValue(newVal.toString());
-                        }}
-                        className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
-                      >
-                        <Icons.Plus size={20} />
-                      </button>
-                    </div>
-                  </div>
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100 mb-2">
+                            <button 
+                              onClick={() => {
+                                const newVal = Math.max(0, value - 1);
+                                setValue(newVal);
+                                setInputValue(newVal.toString());
+                              }}
+                              className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
+                            >
+                              <Icons.Minus size={20} />
+                            </button>
+                            <input 
+                              type="text" 
+                              value={inputValue}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(',', '.');
+                                setInputValue(val);
+                                const parsed = parseFloat(val);
+                                if (!isNaN(parsed)) setValue(parsed);
+                              }}
+                              onBlur={() => setInputValue(value.toString())}
+                              className="w-40 bg-transparent text-center font-black text-4xl outline-none text-slate-800"
+                            />
+                            <button 
+                              onClick={() => {
+                                const newVal = value + 1;
+                                setValue(newVal);
+                                setInputValue(newVal.toString());
+                              }}
+                              className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
+                            >
+                              <Icons.Plus size={20} />
+                            </button>
+                          </div>
+                        </div>
 
-                  <div className={`px-8 py-6 rounded-[32px] text-7xl font-black text-white shadow-xl ${currentPrefix.color} min-w-[140px] flex items-center justify-center relative`}>
-                    {currentPrefix.symbol || 'enhet'}
-                    <div className="absolute -bottom-6 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                      {currentPrefix.name}
-                    </div>
-                  </div>
+                        <motion.button 
+                          onClick={handleUnpack}
+                          whileHover={currentPrefix.power !== 0 ? { scale: 1.05 } : {}}
+                          whileTap={currentPrefix.power !== 0 ? { scale: 0.95 } : {}}
+                          className={`group px-8 py-6 rounded-[32px] text-7xl font-black text-white shadow-xl ${currentPrefix.color} min-w-[140px] flex items-center justify-center relative transition-all ${currentPrefix.power !== 0 ? 'cursor-pointer hover:shadow-2xl' : 'cursor-default'}`}
+                        >
+                          {currentPrefix.symbol || unit}
+                          <div className="absolute -bottom-6 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                            {currentPrefix.name}
+                          </div>
+                          {currentPrefix.power !== 0 && (
+                            <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[8px] font-black px-3 py-1 rounded-full whitespace-nowrap">
+                              KLICKA FÖR ATT PACKA UPP 📦
+                            </div>
+                          )}
+                        </motion.button>
+                      </motion.div>
+                    ) : unpackState === 'expanded' ? (
+                      <motion.div 
+                        key="expanded"
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        onClick={handleUnpack}
+                        className="flex items-center gap-4 text-6xl font-black text-slate-800 whitespace-nowrap cursor-pointer hover:scale-105 transition-transform"
+                      >
+                        <span>{value}</span>
+                        <span className="text-blue-500">·</span>
+                        <div className={`px-6 py-3 rounded-2xl ${currentPrefix.color} text-white text-4xl shadow-lg`}>
+                          {isPowerMode ? (
+                            <Exponent base="10" exp={currentPrefix.power} />
+                          ) : (
+                            currentPrefix.multiplier.replace(/\s/g, '')
+                          )}
+                        </div>
+                        <span className="text-slate-400">{unit}</span>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        key="calculated"
+                        initial={{ opacity: 0, scale: 1.2 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex items-center gap-4 text-7xl font-black text-emerald-600"
+                      >
+                        <span>{formatDisplayValue(value * Math.pow(10, currentPrefix.power))}</span>
+                        <span className="text-slate-400">{unit}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div className="h-px w-full max-w-md bg-slate-100 my-4" />
