@@ -10,7 +10,7 @@ interface ClockLabWidgetProps {
   setTransparent?: (v: boolean) => void;
 }
 
-export const ClockLabWidget: React.FC<ClockLabWidgetProps> = () => {
+export const ClockLabWidget: React.FC<ClockLabWidgetProps> = ({ id, isTransparent, setTransparent }) => {
   const [totalMinutes, setTotalMinutes] = useState(14 * 60 + 35);
   const [viewMode, setViewMode] = useState<ViewMode>('HYBRID');
   const [is24h, setIs24h] = useState(false);

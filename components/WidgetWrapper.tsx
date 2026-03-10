@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Icons } from './icons';
 
 interface WidgetWrapperProps {
@@ -18,7 +18,7 @@ interface WidgetWrapperProps {
   onResize?: (id: string, width: number, height: number) => void;
 }
 
-export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
+export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   id,
   title,
   children,
@@ -264,13 +264,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
         ${transparent ? 'p-0 bg-transparent' : 'p-2 sm:p-4 bg-white/95 backdrop-blur-sm overflow-auto'}
       `}>
         <div className="h-full w-full">
-            {React.Children.map(children, child => {
-                if (React.isValidElement(child)) {
-                    // @ts-ignore
-                    return React.cloneElement(child, { isTransparent: transparent });
-                }
-                return child;
-            })}
+            {children}
         </div>
       </div>
 
@@ -285,4 +279,4 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
       )}
     </div>
   );
-};
+});

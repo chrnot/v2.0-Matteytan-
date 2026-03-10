@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Icons } from './icons';
 import { WidgetType, BackgroundType, BackgroundConfig } from '../types';
 
@@ -31,8 +31,8 @@ const WIDGET_BUTTONS = [
   { type: WidgetType.FRACTION_BARS, icon: Icons.Bars, label: 'Bråkstavar' },
   { type: WidgetType.PERCENTAGE, icon: Icons.Percent, label: 'Procent' },
   { type: WidgetType.COORDINATES, icon: Icons.Graph, label: 'Koordinater' },
-  { type: WidgetType.PROBABILITY, icon: Icons.Dice, label: 'Sannolikhet' },
-  { type: WidgetType.EQUATION, icon: Icons.Scale, label: 'Ekvation' },
+  { type: WidgetType.POSITIONS_MACHINE, icon: Icons.Machine, label: 'Positions-maskin' },
+  { type: WidgetType.PREFIX_ELEVATOR, icon: Icons.Shuffle, label: 'Prefix-Växlaren' },
 ];
 
 const COLORS = [
@@ -43,7 +43,7 @@ const COLORS = [
   { hex: '#f59e0b', label: 'Orange' },
 ];
 
-export const Toolbar: React.FC<ToolbarProps> = ({ 
+export const Toolbar: React.FC<ToolbarProps> = memo(({ 
   onAddWidget, 
   onSetBackground, 
   currentBackground,
@@ -132,7 +132,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       )}
 
       {/* Main Bar Container */}
-      <div className={`flex flex-col gap-2 w-full transition-all duration-500 ${isMinimized ? 'items-end' : 'items-center max-w-[1100px]'}`}>
+      <div className={`flex flex-col gap-2 w-full transition-all duration-500 ${isMinimized ? 'items-end' : 'items-center max-w-[1400px]'}`}>
         
         {isMinimized ? (
           /* Minimized Trigger Button */
@@ -157,7 +157,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <Icons.ChevronDown size={24} />
             </button>
 
-            <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-2 lg:p-3 border border-slate-200 flex gap-1.5 sm:gap-2.5 items-center overflow-x-auto lg:overflow-x-visible w-full no-scrollbar justify-start lg:justify-center px-4 lg:px-6">
+            <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-2xl p-3 lg:p-4 border border-slate-200 flex gap-1.5 sm:gap-2.5 items-center overflow-x-auto lg:overflow-x-visible w-full no-scrollbar justify-start lg:justify-center px-6 lg:px-10">
               {WIDGET_BUTTONS.map((btn) => (
                 <button
                   key={btn.type}
@@ -187,4 +187,4 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -24,6 +24,8 @@ export enum WidgetType {
   ECONOMY = 'ECONOMY',
   MULTI_MATCH = 'MULTI_MATCH',
   TIERED_TASK = 'TIERED_TASK',
+  PREFIX_ELEVATOR = 'PREFIX_ELEVATOR',
+  POSITIONS_MACHINE = 'POSITIONS_MACHINE',
 }
 
 export interface WidgetInstance {
