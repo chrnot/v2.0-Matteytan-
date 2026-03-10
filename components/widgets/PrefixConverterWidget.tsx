@@ -42,13 +42,12 @@ const Exponent = ({ base, exp, className = "" }: { base: string | number, exp: n
 export const PrefixConverterWidget: React.FC = () => {
   const [value, setValue] = useState<number>(5);
   const [inputValue, setInputValue] = useState<string>("5");
-  const [currentPrefix, setCurrentPrefix] = useState<PrefixDef>(PREFIXES.find(p => p.power === 3)!); // Default Kilo
+  const [currentPrefix, setCurrentPrefix] = useState<PrefixDef>(PREFIXES.find(p => p.power === 0)!); // Default Grund
   const [isPowerMode, setIsPowerMode] = useState(false);
-  const [isUnpacked, setIsUnpacked] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [scrollPos, setScrollPos] = useState(0);
   const [hoveredPrefix, setHoveredPrefix] = useState<PrefixDef | null>(null);
-  const [conversionArc, setConversionArc] = useState<{ from: PrefixDef; to: PrefixDef } | null>(null);
+  const [conversionArc, setConversionArc] = useState<{ from: PrefixDef; to: PrefixDef; diff: number } | null>(null);
   const [unit, setUnit] = useState('m');
   const [task, setTask] = useState<{ from: PrefixDef; to: PrefixDef; value: number; unit: string } | null>(null);
   const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
@@ -68,21 +67,20 @@ export const PrefixConverterWidget: React.FC = () => {
   const generateTask = () => {
     const units = ['m', 'g', 'l'];
     const selectedUnit = units[Math.floor(Math.random() * units.length)];
-    // Pick two random prefixes within a reasonable range
     const available = PREFIXES.filter(p => p.power >= -3 && p.power <= 3);
     const from = available[Math.floor(Math.random() * available.length)];
     let to = available[Math.floor(Math.random() * available.length)];
     while (to.power === from.power) {
       to = available[Math.floor(Math.random() * available.length)];
     }
-    const val = Math.floor(Math.random() * 10) * 10 + 10;
+    const val = (Math.floor(Math.random() * 9) + 1) * Math.pow(10, Math.floor(Math.random() * 3));
     setTask({ from, to, value: val, unit: selectedUnit });
     setUnit(selectedUnit);
     setCurrentPrefix(from);
     setValue(val);
     setInputValue(val.toString());
-    setIsUnpacked(false);
     setShowFeedback(null);
+    setConversionArc(null);
   };
 
   const checkTask = () => {
@@ -101,30 +99,25 @@ export const PrefixConverterWidget: React.FC = () => {
 
   const scaleRef = useRef<HTMLDivElement>(null);
 
-  const handleUnpack = () => {
-    setIsUnpacked(!isUnpacked);
-  };
-
   const handlePrefixClick = (p: PrefixDef) => {
-    if (p.power === currentPrefix.power) {
-      handleUnpack();
-    } else {
-      setConversionArc({ from: currentPrefix, to: p });
-      // Center the new prefix on the scale
-      setScrollPos(-getXPos(p.power));
-      
-      const powerDiff = currentPrefix.power - p.power;
-      const newValue = value * Math.pow(10, powerDiff);
-      const formattedValue = Number(newValue.toFixed(9));
-      
-      setTimeout(() => {
-        setValue(formattedValue);
-        setInputValue(formattedValue.toString());
-        setCurrentPrefix(p);
-        setConversionArc(null);
-        setIsUnpacked(false);
-      }, 1500);
-    }
+    if (conversionArc) return; // Prevent spamming
+    if (p.power === currentPrefix.power) return;
+
+    const powerDiff = currentPrefix.power - p.power;
+    setConversionArc({ from: currentPrefix, to: p, diff: powerDiff });
+    
+    // Center the new prefix on the scale
+    setScrollPos(-getXPos(p.power));
+    
+    const newValue = value * Math.pow(10, powerDiff);
+    const formattedValue = Number(newValue.toFixed(10));
+    
+    setTimeout(() => {
+      setValue(formattedValue);
+      setInputValue(formattedValue.toString());
+      setCurrentPrefix(p);
+      setConversionArc(null);
+    }, 1200);
   };
 
   const getXPos = (power: number) => {
@@ -184,331 +177,306 @@ export const PrefixConverterWidget: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white select-none overflow-hidden font-sans relative">
-      {/* Top Right Controls */}
-      <div className="absolute top-6 right-6 flex items-center gap-3 z-50">
-        <button 
-          onClick={() => setShowHelp(true)}
-          className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
-          title="Hjälp"
-        >
-          <Icons.Info size={20} />
-        </button>
-      </div>
-
-      {/* Workspace Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 relative bg-gradient-to-b from-slate-50/50 to-white">
-        <div className="flex flex-col items-center gap-12">
-          <div className="flex items-center gap-6">
-            <motion.div 
-              layout
-              className="flex flex-col items-center"
+    <div className="flex flex-col h-full bg-slate-50 select-none overflow-hidden font-sans relative">
+      {/* Header / Controls */}
+      <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-50">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+            <button 
+              onClick={() => setIsPowerMode(false)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${!isPowerMode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Värde</span>
-              <div className="flex items-baseline gap-2">
-                <span className={`font-black text-slate-900 tracking-tighter transition-all duration-300 ${
-                  value.toString().length > 12 ? 'text-4xl' : 
-                  value.toString().length > 8 ? 'text-6xl' : 'text-8xl'
-                }`}>
-                  {formatDisplayValue(value)}
-                </span>
-                <span className="text-4xl font-black text-slate-400">
-                  {unit}
-                </span>
-              </div>
-            </motion.div>
-
-            <AnimatePresence mode="wait">
-              {!isUnpacked ? (
-                <motion.button
-                  key="prefix"
-                  initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                  exit={{ opacity: 0, x: 100, filter: 'blur(10px)' }}
-                  onClick={handleUnpack}
-                  className={`px-8 py-4 rounded-[32px] text-7xl font-black text-white shadow-2xl ${currentPrefix.color} hover:scale-105 active:scale-95 transition-transform relative group`}
-                >
-                  {currentPrefix.symbol || 'unit'}
-                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap text-[10px] font-black text-slate-400 uppercase tracking-widest">Klicka för att packa upp</div>
-                </motion.button>
-              ) : (
-                <motion.div
-                  key="multiplier"
-                  initial={{ opacity: 0, x: -100, filter: 'blur(10px)' }}
-                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                  onClick={handleUnpack}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-8 bg-blue-50/50 p-8 rounded-[40px] border-2 border-blue-100 shadow-inner">
-                    <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Värde</span>
-                      <span className="text-5xl font-black text-slate-700">{formatDisplayValue(value)}</span>
-                    </div>
-                    <span className="text-4xl font-black text-blue-300">×</span>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Prefix-värde</span>
-                      <span className="text-5xl font-black text-blue-600">
-                        {isPowerMode ? <Exponent base="10" exp={currentPrefix.power} /> : currentPrefix.multiplier}
-                      </span>
-                    </div>
-                    <span className="text-4xl font-black text-emerald-300">=</span>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Resultat</span>
-                      <span className="text-6xl font-black text-emerald-600">
-                        {formatDisplayValue(value * Math.pow(10, currentPrefix.power))}
-                      </span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1">
-                        {unit === 'm' ? 'meter' : unit === 'g' ? 'gram' : 'liter'}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              Standard
+            </button>
+            <button 
+              onClick={() => setIsPowerMode(true)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isPowerMode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Potens
+            </button>
           </div>
 
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={() => setIsPowerMode(!isPowerMode)}
-              className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border-2 ${
-                isPowerMode 
-                  ? 'bg-slate-900 border-slate-900 text-white shadow-xl' 
-                  : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-              }`}
-            >
-              {isPowerMode ? 'Grundpotens-läge' : 'Standard-läge'}
-            </button>
+          <div className="h-6 w-px bg-slate-200" />
 
-            <button 
-              onClick={task ? checkTask : generateTask}
-              className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border-2 shadow-lg ${
-                task 
-                  ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700' 
-                  : 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
-              }`}
-            >
-              {task ? 'Kontrollera svar' : 'Ny Utmaning'}
-            </button>
-
-            {task && (
-              <button 
-                onClick={() => setShowHelp(!showHelp)}
-                className="w-12 h-12 rounded-2xl bg-white border-2 border-slate-200 text-slate-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
-              >
-                <Icons.Info size={24} />
-              </button>
-            )}
-            
-            <div className="flex items-center gap-3 bg-white p-2 rounded-[24px] border-2 border-slate-100 shadow-sm">
-              <select 
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className="bg-slate-50 px-3 py-2 rounded-xl font-black text-xs outline-none text-slate-600 border-none appearance-none cursor-pointer"
-              >
-                <option value="m">meter (m)</option>
-                <option value="g">gram (g)</option>
-                <option value="l">liter (l)</option>
-              </select>
-              <div className="w-px h-8 bg-slate-100 mx-1" />
-              <button 
-                onClick={() => {
-                  const newVal = Math.max(0, value - 1);
-                  setValue(newVal);
-                  setInputValue(newVal.toString());
-                }}
-                className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-              >
-                <Icons.Minus size={24} />
-              </button>
-              <input 
-                type="text" 
-                value={inputValue}
-                onChange={(e) => {
-                  const val = e.target.value.replace(',', '.');
-                  setInputValue(val);
-                  const parsed = parseFloat(val);
-                  if (!isNaN(parsed)) {
-                    setValue(parsed);
-                  }
-                }}
-                onBlur={() => {
-                  setInputValue(value.toString());
-                }}
-                className="w-32 bg-transparent text-center font-black text-3xl outline-none text-slate-800"
-              />
-              <button 
-                onClick={() => {
-                  const newVal = value + 1;
-                  setValue(newVal);
-                  setInputValue(newVal.toString());
-                }}
-                className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-              >
-                <Icons.Plus size={24} />
-              </button>
-            </div>
-          </div>
+          <select 
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            className="bg-slate-50 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest outline-none text-slate-600 border border-slate-200 cursor-pointer hover:border-slate-300 transition-colors"
+          >
+            <option value="m">Meter (m)</option>
+            <option value="g">Gram (g)</option>
+            <option value="l">Liter (l)</option>
+          </select>
         </div>
 
-        {/* Help Overlay */}
-        <AnimatePresence>
-          {showHelp && task && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute inset-0 z-[110] flex items-center justify-center p-8"
-            >
-              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowHelp(false)} />
-              <div className="bg-white rounded-[40px] shadow-2xl p-10 max-w-lg relative z-10 border border-slate-100">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={task ? checkTask : generateTask}
+            className={`px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md ${
+              task 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-emerald-500 text-white hover:bg-emerald-600'
+            }`}
+          >
+            {task ? 'Kontrollera' : 'Ny Utmaning'}
+          </button>
+          <button 
+            onClick={() => setShowHelp(true)}
+            className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+          >
+            <Icons.Info size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Workspace Split */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Side: Value Display */}
+        <div className="flex-1 flex flex-col items-center justify-center p-12 bg-white relative">
+          <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
+            <div className="w-full flex flex-col items-center">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">Aktuellt Värde</span>
+              
+              <div className="flex flex-col items-center gap-4 w-full">
+                <div className="flex items-center justify-center gap-6 w-full">
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100 mb-2">
+                       <button 
+                        onClick={() => {
+                          const newVal = Math.max(0, value - 1);
+                          setValue(newVal);
+                          setInputValue(newVal.toString());
+                        }}
+                        className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
+                      >
+                        <Icons.Minus size={20} />
+                      </button>
+                      <input 
+                        type="text" 
+                        value={inputValue}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(',', '.');
+                          setInputValue(val);
+                          const parsed = parseFloat(val);
+                          if (!isNaN(parsed)) setValue(parsed);
+                        }}
+                        onBlur={() => setInputValue(value.toString())}
+                        className="w-40 bg-transparent text-center font-black text-4xl outline-none text-slate-800"
+                      />
+                      <button 
+                        onClick={() => {
+                          const newVal = value + 1;
+                          setValue(newVal);
+                          setInputValue(newVal.toString());
+                        }}
+                        className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
+                      >
+                        <Icons.Plus size={20} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={`px-8 py-6 rounded-[32px] text-7xl font-black text-white shadow-xl ${currentPrefix.color} min-w-[140px] flex items-center justify-center relative`}>
+                    {currentPrefix.symbol || 'enhet'}
+                    <div className="absolute -bottom-6 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                      {currentPrefix.name}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px w-full max-w-md bg-slate-100 my-4" />
+
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-2">Motsvarar totalt</span>
+                  <div className="text-2xl font-black text-slate-400 flex items-baseline gap-2 text-center">
+                    <span>{formatDisplayValue(value * Math.pow(10, currentPrefix.power))}</span>
+                    <span className="text-sm">{unit === 'm' ? 'meter' : unit === 'g' ? 'gram' : 'liter'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Conversion Arc Overlay */}
+          <AnimatePresence>
+            {conversionArc && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.1 }}
+                className="absolute inset-0 pointer-events-none flex items-center justify-center z-20"
+              >
+                <div className="bg-white/95 backdrop-blur-md px-10 py-8 rounded-[40px] shadow-2xl border-2 border-blue-500 flex flex-col items-center gap-3">
+                  <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Växlar Prefix</div>
+                  <div className="flex items-center gap-6">
+                    <div className="flex flex-col items-center">
+                      <span className="text-3xl font-black text-slate-400">{conversionArc.from.symbol || 'enhet'}</span>
+                      <span className="text-[10px] font-bold text-slate-300 uppercase">{conversionArc.from.name}</span>
+                    </div>
+                    <Icons.ChevronRight className="text-blue-500" size={32} />
+                    <div className="flex flex-col items-center">
+                      <span className="text-3xl font-black text-slate-900">{conversionArc.to.symbol || 'enhet'}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{conversionArc.to.name}</span>
+                    </div>
+                  </div>
+                  <div className="text-4xl font-black text-blue-600 mt-2">
+                    × 10<Exponent base="" exp={conversionArc.diff} />
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-400 mt-1 italic">
+                    {conversionArc.diff > 0 ? 'Kommatecknet flyttas åt höger' : 'Kommatecknet flyttas åt vänster'}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Right Side: Challenge Panel */}
+        <div className="w-80 bg-slate-50 border-l border-slate-200 p-8 flex flex-col gap-6 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            {task ? (
+              <motion.div
+                key="task"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="flex flex-col gap-6"
+              >
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Icons.Zap size={18} />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Utmaning</span>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="text-sm font-medium text-slate-500 leading-relaxed">
+                      Gör om <span className="text-slate-900 font-black">{task.value} {task.from.symbol}{task.unit}</span> till:
+                    </div>
+                    <div className="text-2xl font-black text-blue-600 leading-tight">
+                      {getFullUnitName(task.to.name, task.unit)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-600/5 rounded-2xl p-4 border border-blue-100">
+                  <p className="text-[10px] font-bold text-blue-600 leading-relaxed">
+                    Tips: Klicka på <span className="font-black">{task.to.symbol || 'enhet'}</span> på skalan längst ner!
+                  </p>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center h-full text-center gap-4 opacity-40"
+              >
+                <Icons.Book size={48} className="text-slate-300" />
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Klicka på "Ny Utmaning" för att börja träna
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Overlays */}
+      <AnimatePresence>
+        {showHelp && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute inset-0 z-[110] flex items-center justify-center p-8"
+          >
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowHelp(false)} />
+            <div className="bg-white rounded-[40px] shadow-2xl p-10 max-w-lg relative z-10 border border-slate-100">
+              <button 
+                onClick={() => setShowHelp(false)}
+                className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-600 transition-colors"
+              >
+                <Icons.X size={24} />
+              </button>
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6">
+                  <Icons.Lightbulb size={32} />
+                </div>
+                <h3 className="text-2xl font-black text-slate-800 mb-4">Hur gör man?</h3>
+                <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
+                  <p>
+                    Varje steg på skalan är en <span className="text-blue-600 font-black">10-gånger</span> förändring.
+                  </p>
+                  <div className="bg-slate-50 p-6 rounded-3xl text-sm space-y-2">
+                    <p>⬅️ Gå till <span className="font-bold">vänster</span>: Flytta kommatecknet till <span className="font-bold">höger</span> (talet blir större).</p>
+                    <p>➡️ Gå till <span className="font-bold">höger</span>: Flytta kommatecknet till <span className="font-bold">vänster</span> (talet blir mindre).</p>
+                  </div>
+                  <p className="text-sm">
+                    För att lösa uppgiften: Klicka på rätt prefix på skal-linjen längst ner så att enheten matchar målet!
+                  </p>
+                </div>
                 <button 
                   onClick={() => setShowHelp(false)}
-                  className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-600 transition-colors"
+                  className="mt-8 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all"
                 >
-                  <Icons.X size={24} />
+                  Jag fattar!
                 </button>
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6">
-                    <Icons.Lightbulb size={32} />
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-800 mb-4">Hur gör man?</h3>
-                  <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
-                    <p>
-                      Varje steg på skalan är en <span className="text-blue-600 font-black">10-gånger</span> förändring.
-                    </p>
-                    <div className="bg-slate-50 p-6 rounded-3xl text-sm space-y-2">
-                      <p>⬅️ Gå till <span className="font-bold">vänster</span>: Flytta kommatecknet till <span className="font-bold">höger</span> (talet blir större).</p>
-                      <p>➡️ Gå till <span className="font-bold">höger</span>: Flytta kommatecknet till <span className="font-bold">vänster</span> (talet blir mindre).</p>
-                    </div>
-                    <p className="text-sm">
-                      För att lösa uppgiften: Klicka på rätt prefix på skal-linjen längst ner så att enheten matchar målet!
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => setShowHelp(false)}
-                    className="mt-8 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all"
-                  >
-                    Jag fattar!
-                  </button>
-                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Task Overlay */}
-        <AnimatePresence>
-          {task && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="absolute bottom-52 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-8 py-4 rounded-3xl border-2 border-blue-500 shadow-2xl flex flex-col items-center gap-2 z-40"
-            >
-              <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Utmaning</div>
-              <div className="text-2xl font-black text-slate-800 text-center">
-                Gör om <span className="text-blue-600">{task.value} {task.from.symbol}{task.unit}</span> till <span className="text-emerald-600">{getFullUnitName(task.to.name, task.unit)}</span>
-              </div>
-              <div className="text-xs font-bold text-slate-400">Använd skalan för att växla prefix</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <AnimatePresence>
+        {showFeedback && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.5 }}
+            className="absolute inset-0 flex items-center justify-center z-[100] pointer-events-none"
+          >
+            <div className={`px-12 py-6 rounded-full text-4xl font-black text-white shadow-2xl ${showFeedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+              {showFeedback === 'correct' ? 'Snyggt! 🎉' : 'Försök igen! 🧐'}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Feedback Overlay */}
-        <AnimatePresence>
-          {showFeedback && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.5 }}
-              className={`absolute inset-0 flex items-center justify-center z-[100] pointer-events-none`}
-            >
-              <div className={`px-12 py-6 rounded-full text-4xl font-black text-white shadow-2xl ${showFeedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                {showFeedback === 'correct' ? 'Snyggt! 🎉' : 'Försök igen! 🧐'}
+      {/* Prefix Info Card (Hover) */}
+      <AnimatePresence>
+        {hoveredPrefix && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="absolute top-20 left-1/2 -translate-x-1/2 w-72 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50 overflow-hidden"
+          >
+            <div className={`absolute top-0 right-0 w-16 h-16 ${hoveredPrefix.color} opacity-10 rounded-bl-full`} />
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-xl ${hoveredPrefix.color} flex items-center justify-center text-white font-black text-xl shadow-lg`}>
+                {hoveredPrefix.symbol || '1'}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Conversion Arc Overlay */}
-        <AnimatePresence>
-          {conversionArc && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 pointer-events-none flex items-center justify-center"
-            >
-              <svg className="w-full h-full max-w-4xl max-h-[400px]">
-                <motion.path
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  d="M 100 300 Q 400 50 700 300"
-                  fill="none"
-                  stroke="url(#arcGradient)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray="1 20"
-                />
-                <defs>
-                  <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor={conversionArc.from.color.replace('bg-', '#')} />
-                    <stop offset="100%" stopColor={conversionArc.to.color.replace('bg-', '#')} />
-                  </linearGradient>
-                </defs>
-                <motion.g
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <rect x="300" y="80" width="200" height="60" rx="30" fill="white" className="shadow-xl" />
-                  <text x="400" y="120" textAnchor="middle" className="fill-slate-900 font-black text-xl">
-                    × 10
-                  </text>
-                  <text x="435" y="110" textAnchor="start" className="fill-slate-900 font-black text-xs">
-                    {currentPrefix.power - conversionArc.to.power}
-                  </text>
-                </motion.g>
-              </svg>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Prefix Info Card (Hover) */}
-        <AnimatePresence>
-          {hoveredPrefix && (
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              className="absolute top-8 right-8 w-64 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50 overflow-hidden"
-            >
-              <div className={`absolute top-0 right-0 w-16 h-16 ${hoveredPrefix.color} opacity-10 rounded-bl-full`} />
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-xl ${hoveredPrefix.color} flex items-center justify-center text-white font-black text-xl shadow-lg`}>
-                  {hoveredPrefix.symbol || '1'}
-                </div>
-                <div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Prefix</div>
-                  <div className="text-xl font-black text-slate-800 leading-none">{hoveredPrefix.name}</div>
-                </div>
+              <div>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Prefix</div>
+                <div className="text-xl font-black text-slate-800 leading-none">{hoveredPrefix.name}</div>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Värde</div>
-                  <div className="text-sm font-bold text-slate-600">{hoveredPrefix.description} ({isPowerMode ? hoveredPrefix.powerLabel : hoveredPrefix.multiplier})</div>
-                </div>
-                <div className="h-px bg-slate-100" />
-                <div>
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Exempel</div>
-                  <p className="text-xs text-slate-500 leading-relaxed italic">"{hoveredPrefix.example}"</p>
-                </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Värde</div>
+                <div className="text-sm font-bold text-slate-600">{hoveredPrefix.description} ({isPowerMode ? hoveredPrefix.powerLabel : hoveredPrefix.multiplier})</div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              <div className="h-px bg-slate-100" />
+              <div>
+                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Exempel</div>
+                <p className="text-xs text-slate-500 leading-relaxed italic">"{hoveredPrefix.example}"</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Scale Area */}
       <div className="h-48 bg-slate-50 border-t border-slate-200 relative overflow-hidden">
