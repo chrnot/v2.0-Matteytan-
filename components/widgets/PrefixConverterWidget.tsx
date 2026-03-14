@@ -52,7 +52,37 @@ export const PrefixConverterWidget: React.FC = () => {
   const [task, setTask] = useState<{ from: PrefixDef; to: PrefixDef; value: number; unit: string } | null>(null);
   const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [enabledPrefixes, setEnabledPrefixes] = useState<Set<PrefixPower>>(new Set(PREFIXES.map(p => p.power)));
   const [unpackState, setUnpackState] = useState<'idle' | 'expanded' | 'calculated'>('idle');
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(z => Math.max(0.5, Math.min(3, z + delta)));
+    } else {
+      setScrollPos(p => p - e.deltaX - e.deltaY);
+    }
+  };
+
+  const togglePrefix = (power: PrefixPower) => {
+    if (power === 0) return; // Cannot disable base unit
+    setEnabledPrefixes(prev => {
+      const next = new Set(prev);
+      if (next.has(power)) next.delete(power);
+      else next.add(power);
+      return next;
+    });
+  };
+
+  const applyPreset = (type: 'common' | 'scientific') => {
+    if (type === 'common') {
+      setEnabledPrefixes(new Set([3, 0, -1, -2, -3])); // kilo, base, deci, centi, milli
+    } else {
+      setEnabledPrefixes(new Set(PREFIXES.map(p => p.power)));
+    }
+  };
 
   const getFullUnitName = (prefixName: string, unitCode: string) => {
     const baseNames: Record<string, string> = {
@@ -266,8 +296,77 @@ export const PrefixConverterWidget: React.FC = () => {
           >
             <Icons.Info size={20} />
           </button>
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all shadow-sm ${showSettings ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200'}`}
+          >
+            <Icons.Settings size={20} />
+          </button>
         </div>
       </div>
+
+      {/* Settings Overlay */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="absolute top-20 right-8 z-[100] w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 overflow-hidden"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Anpassa Skalan</h3>
+              <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600">
+                <Icons.X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Förinställningar</div>
+                <div className="grid grid-cols-1 gap-2">
+                  <button 
+                    onClick={() => applyPreset('common')}
+                    className="px-3 py-2 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-lg text-xs font-bold transition-colors text-left flex items-center justify-between"
+                  >
+                    <span>Endast vanliga (m-k)</span>
+                    <Icons.ChevronRight size={14} />
+                  </button>
+                  <button 
+                    onClick={() => applyPreset('scientific')}
+                    className="px-3 py-2 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg text-xs font-bold transition-colors text-left flex items-center justify-between"
+                  >
+                    <span>Vetenskaplig (n-T)</span>
+                    <Icons.ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Aktiva Prefix</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {PREFIXES.map(p => (
+                    <button
+                      key={p.name}
+                      disabled={p.power === 0}
+                      onClick={() => togglePrefix(p.power)}
+                      className={`
+                        px-2 py-2 rounded-lg text-[10px] font-black transition-all border
+                        ${enabledPrefixes.has(p.power) 
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                          : 'bg-white text-slate-400 border-slate-200 opacity-50'}
+                        ${p.power === 0 ? 'cursor-not-allowed' : 'hover:scale-105 active:scale-95'}
+                      `}
+                    >
+                      {p.symbol || 'Enhet'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Workspace Split */}
       <div className="flex-1 flex overflow-hidden">
@@ -571,13 +670,19 @@ export const PrefixConverterWidget: React.FC = () => {
       </AnimatePresence>
 
       {/* Scale Area */}
-      <div className="h-48 bg-slate-50 border-t border-slate-200 relative overflow-hidden">
+      <div 
+        className="h-48 bg-slate-50 border-t border-slate-200 relative overflow-hidden"
+        onWheel={handleWheel}
+      >
         <div className="absolute top-4 left-8 flex items-center gap-4 z-10">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Skal-Linjen</div>
           <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
             <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1 hover:bg-slate-50 rounded"><Icons.Minus size={14}/></button>
             <div className="text-[9px] font-black w-8 text-center">{Math.round(zoom * 100)}%</div>
-            <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-1 hover:bg-slate-50 rounded"><Icons.Plus size={14}/></button>
+            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1 hover:bg-slate-50 rounded"><Icons.Plus size={14}/></button>
+          </div>
+          <div className="text-[9px] font-bold text-slate-400 italic hidden sm:block">
+            Ctrl + Scroll för att zooma
           </div>
         </div>
 
@@ -590,47 +695,55 @@ export const PrefixConverterWidget: React.FC = () => {
             {/* Main Axis Line */}
             <div className="absolute h-1 bg-slate-200 rounded-full w-[5000px] -translate-x-1/2" />
 
-            {PREFIXES.map((p) => {
-              const x = getXPos(p.power);
-              const isActive = currentPrefix.power === p.power;
-              
-              return (
-                <motion.div
-                  key={p.name}
-                  className="absolute flex flex-col items-center"
-                  style={{ left: x }}
-                >
-                  {/* Tick */}
-                  <div className={`w-1 h-4 rounded-full mb-4 ${isActive ? 'bg-blue-600' : 'bg-slate-300'}`} />
-                  
-                  {/* Button */}
-                  <motion.button
-                    onMouseEnter={() => setHoveredPrefix(p)}
-                    onMouseLeave={() => setHoveredPrefix(null)}
-                    onClick={() => handlePrefixClick(p)}
-                    whileHover={{ scale: 1.1, y: -5 }}
-                    whileTap={{ scale: 0.9 }}
-                    className={`
-                      w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-lg transition-all
-                      ${isActive ? `${p.color} text-white ring-4 ring-white` : 'bg-white text-slate-400 hover:text-slate-600'}
-                    `}
-                  >
-                    {p.symbol || '1'}
-                  </motion.button>
+            <AnimatePresence mode="popLayout">
+              {PREFIXES.map((p) => {
+                const isEnabled = enabledPrefixes.has(p.power);
+                if (!isEnabled) return null;
 
-                  <div className={`mt-3 text-[10px] font-black uppercase tracking-tighter ${isActive ? 'text-slate-800' : 'text-slate-400'}`}>
-                    {p.name}
-                  </div>
-                  <div className="text-[8px] font-bold text-slate-300 mt-1">
-                    {isPowerMode ? (
-                      <Exponent base="10" exp={p.power} />
-                    ) : (
-                      p.multiplier
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
+                const x = getXPos(p.power);
+                const isActive = currentPrefix.power === p.power;
+                
+                return (
+                  <motion.div
+                    key={p.name}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    className="absolute flex flex-col items-center"
+                    style={{ left: x }}
+                  >
+                    {/* Tick */}
+                    <div className={`w-1 h-4 rounded-full mb-4 ${isActive ? 'bg-blue-600' : 'bg-slate-300'}`} />
+                    
+                    {/* Button */}
+                    <motion.button
+                      onMouseEnter={() => setHoveredPrefix(p)}
+                      onMouseLeave={() => setHoveredPrefix(null)}
+                      onClick={() => handlePrefixClick(p)}
+                      whileHover={{ scale: 1.1, y: -5 }}
+                      whileTap={{ scale: 0.9 }}
+                      className={`
+                        w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-lg transition-all
+                        ${isActive ? `${p.color} text-white ring-4 ring-white` : 'bg-white text-slate-400 hover:text-slate-600'}
+                      `}
+                    >
+                      {p.symbol || '1'}
+                    </motion.button>
+
+                    <div className={`mt-3 text-[10px] font-black uppercase tracking-tighter ${isActive ? 'text-slate-800' : 'text-slate-400'}`}>
+                      {p.name}
+                    </div>
+                    <div className="text-[8px] font-bold text-slate-300 mt-1">
+                      {isPowerMode ? (
+                        <Exponent base="10" exp={p.power} />
+                      ) : (
+                        p.multiplier
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         </div>
 

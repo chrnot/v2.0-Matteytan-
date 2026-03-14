@@ -2,13 +2,17 @@ import React from 'react';
 
 interface LogoProps {
   darkMode?: boolean;
+  onPiClick?: () => void;
 }
 
-export const Logo: React.FC<LogoProps> = ({ darkMode }) => {
+export const Logo: React.FC<LogoProps> = ({ darkMode, onPiClick }) => {
   return (
-    <div className="absolute top-6 left-6 z-30 flex items-center gap-3 select-none pointer-events-none transition-opacity duration-500">
+    <div className="absolute top-6 left-6 z-30 flex items-center gap-3 select-none transition-opacity duration-500">
        {/* Icon Container */}
-       <div className="relative w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transform -rotate-2 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 border border-white/20">
+       <div 
+          onClick={onPiClick}
+          className={`relative w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transform -rotate-2 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 border border-white/20 transition-all active:scale-95 ${onPiClick ? 'cursor-pointer hover:scale-110' : 'pointer-events-none'}`}
+       >
           
           {/* Subtle grid texture inside logo */}
           <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1px)] bg-[size:4px_4px]"></div>

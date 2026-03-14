@@ -55,7 +55,9 @@ import {
   BrainCircuit,
   LifeBuoy,
   Settings,
-  Star
+  Star,
+  Music,
+  Search
 } from 'lucide-react';
 
 export const Icons = {
@@ -116,5 +118,7 @@ export const Icons = {
   Brain: BrainCircuit,
   LifeBuoy,
   Settings,
-  Star
+  Star,
+  Music,
+  Search
 };

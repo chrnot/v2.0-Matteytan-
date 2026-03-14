@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Toolbar } from './components/Toolbar';
 import { WidgetWrapper } from './components/WidgetWrapper';
 import { Logo } from './components/Logo';
@@ -34,6 +35,7 @@ const MultiMatchWidget = lazy(() => import('./components/widgets/MultiMatchWidge
 const TieredTaskWidget = lazy(() => import('./components/widgets/TieredTaskWidget').then(m => ({ default: m.TieredTaskWidget })));
 const PrefixConverterWidget = lazy(() => import('./components/widgets/PrefixConverterWidget').then(m => ({ default: m.PrefixConverterWidget })));
 const PositionsMachineWidget = lazy(() => import('./components/widgets/PositionsMachineWidget').then(m => ({ default: m.PositionsMachineWidget })));
+const PiCodeWidget = lazy(() => import('./components/widgets/PiCodeWidget').then(m => ({ default: m.PiCodeWidget })));
 
 // Lazy load modals
 const AboutModal = lazy(() => import('./components/AboutModal').then(m => ({ default: m.AboutModal })));
@@ -106,6 +108,7 @@ const App: React.FC = () => {
   const [isCoCOpen, setIsCoCOpen] = useState(false);
   
   const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [isPiCodeOpen, setIsPiCodeOpen] = useState(false);
   const [drawColor, setDrawColor] = useState('#ef4444'); 
   const [drawWidth, setDrawWidth] = useState(4);
   const [isEraser, setIsEraser] = useState(false);
@@ -247,7 +250,7 @@ const App: React.FC = () => {
   return (
     <div className={`w-full h-full relative overflow-hidden transition-colors duration-500 ${getBackgroundClass()}`}>
       
-      <Logo darkMode={background === 'BLACK'} />
+      <Logo darkMode={background === 'BLACK'} onPiClick={() => setIsPiCodeOpen(true)} />
 
       {/* Top Controls Bar */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[2000] flex items-start gap-2">
@@ -359,6 +362,15 @@ const App: React.FC = () => {
       <Suspense fallback={null}>
         <CodeOfConductModal isOpen={isCoCOpen} onClose={() => setIsCoCOpen(false)} />
       </Suspense>
+
+      {/* Pi Code Widget (Hidden) */}
+      <AnimatePresence>
+        {isPiCodeOpen && (
+          <Suspense fallback={null}>
+            <PiCodeWidget onClose={() => setIsPiCodeOpen(false)} />
+          </Suspense>
+        )}
+      </AnimatePresence>
 
       {/* GLOBAL FOOTER ELEMENTS */}
       
