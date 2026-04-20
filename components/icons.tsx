@@ -57,7 +57,13 @@ import {
   Settings,
   Star,
   Music,
-  Search
+  Search,
+  Sigma,
+  BarChart2,
+  Menu,
+  Check,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 
 export const Icons = {
@@ -120,5 +126,11 @@ export const Icons = {
   Settings,
   Star,
   Music,
-  Search
+  Search,
+  Sigma,
+  BarChart2,
+  Menu,
+  Check,
+  ArrowRight,
+  ArrowLeft
 };

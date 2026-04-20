@@ -48,55 +48,246 @@ const BACKGROUNDS: BackgroundConfig[] = [
   { type: 'BLACK', label: 'Svart', className: 'bg-slate-900' },
 ];
 
+import { MathArea, Difficulty, WidgetMetadata, MathSubArea } from './types';
+import { Sidebar } from './components/Sidebar';
+
 const clamp = (val: number, max: number) => Math.min(val, max);
+
+const MagicSquareWidget = lazy(() => import('./components/widgets/MagicSquareWidget').then(m => ({ default: m.MagicSquareWidget })));
+const MatchstickRiddleWidget = lazy(() => import('./components/widgets/MatchstickRiddleWidget').then(m => ({ default: m.MatchstickRiddleWidget })));
 
 const WIDGET_CONFIG: Record<WidgetType, { 
   title: string; 
   component: React.ComponentType<any>;
   size: (isMobile: boolean, sw: number, sh: number) => { w: number; h: number };
+  category: MathArea[];
+  subCategory?: MathSubArea;
+  difficulty: Difficulty;
+  klagSupport?: boolean;
 }> = {
-  [WidgetType.NUMBER_LINE]: { title: 'Tallinje', component: NumberLineWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 800, sw * 0.95), h: clamp(m ? 450 : 380, sh * 0.85) }) },
-  [WidgetType.RULER]: { title: 'Linjal', component: RulerWidget, size: (m, sw, sh) => ({ w: clamp(m ? 350 : 600, sw * 0.95), h: 180 }) },
-  [WidgetType.PROTRACTOR]: { title: 'Gradskiva', component: ProtractorWidget, size: (m, sw, sh) => ({ w: clamp(m ? 350 : 450, sw * 0.95), h: 280 }) },
-  [WidgetType.FRACTION]: { title: 'Bråk', component: FractionWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 550, sw * 0.95), h: clamp(m ? 650 : 450, sh * 0.85) }) },
-  [WidgetType.COORDINATES]: { title: 'Koordinatsystem', component: CoordinatesWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 700, sw * 0.95), h: clamp(m ? 650 : 500, sh * 0.85) }) },
-  [WidgetType.PROBABILITY]: { title: 'Sannolikhet', component: ProbabilityWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }) },
-  [WidgetType.NUMBER_OF_DAY]: { title: 'Dagens Tal', component: NumberDayWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 450, sw * 0.95), h: clamp(m ? 700 : 750, sh * 0.85) }) },
-  [WidgetType.EQUATION]: { title: 'Ekvationer', component: EquationWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }) },
-  [WidgetType.FORMULAS]: { title: 'Formler', component: FormulaWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }) },
-  [WidgetType.CALCULATOR]: { title: 'Räknare', component: CalculatorWidget, size: (m, sw, sh) => ({ w: clamp(340, sw * 0.95), h: clamp(m ? 520 : 580, sh * 0.85) }) },
-  [WidgetType.PERCENTAGE]: { title: 'Procent', component: PercentageWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 700, sw * 0.95), h: clamp(m ? 650 : 520, sh * 0.85) }) },
-  [WidgetType.BASE_10]: { title: 'Bas-klossar', component: Base10Widget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 750 : 550, sh * 0.85) }) },
-  [WidgetType.HUNDRED_CHART]: { title: 'Hundrarutan', component: HundredChartWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 500, sw * 0.95), h: clamp(m ? 600 : 650, sh * 0.85) }) },
-  [WidgetType.NUMBER_HOUSE]: { title: 'Tal-huset', component: NumberHouseWidget, size: (m, sw, sh) => ({ w: clamp(360, sw * 0.95), h: clamp(m ? 550 : 580, sh * 0.85) }) },
-  [WidgetType.NUMBER_BEADS]: { title: 'Pärlband', component: NumberBeadsWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 550 : 720, sh * 0.85) }) },
-  [WidgetType.SHAPES]: { title: 'Former', component: ShapesWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 500, sw * 0.95), h: clamp(m ? 700 : 580, sh * 0.85) }) },
-  [WidgetType.FRACTION_BARS]: { title: 'Bråkstavar', component: FractionBarsWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 800, sw * 0.95), h: clamp(m ? 700 : 550, sh * 0.85) }) },
-  [WidgetType.MATH_WORKSHOP]: { title: 'Matte-verkstad', component: MathWorkshopWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 650 : 600, sh * 0.85) }) },
-  [WidgetType.PRIME_BUBBLES]: { title: 'Prim-Bubblor', component: PrimeBubblesWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 650 : 650, sh * 0.85) }) },
-  [WidgetType.CHANCE_GENERATOR]: { title: 'Slump-gen', component: ChanceGeneratorWidget, size: (m, sw, sh) => ({ w: clamp(360, sw * 0.95), h: clamp(m ? 650 : 580, sh * 0.85) }) },
-  [WidgetType.CLOCK]: { title: 'Klock-Labbet', component: ClockLabWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 700, sw * 0.95), h: clamp(m ? 650 : 550, sh * 0.85) }) },
-  [WidgetType.ECONOMY]: { title: 'Plånboken', component: EconomyWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 750, sw * 0.95), h: clamp(m ? 800 : 650, sh * 0.85) }) },
-  [WidgetType.MULTI_MATCH]: { title: 'Multi-Matchen', component: MultiMatchWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 450, sw * 0.95), h: clamp(m ? 700 : 750, sh * 0.85) }) },
-  [WidgetType.TIERED_TASK]: { title: 'Nivå-Kortet', component: TieredTaskWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 650 : 650, sh * 0.85) }) },
-  [WidgetType.PREFIX_ELEVATOR]: { title: 'Prefix-Växlaren', component: PrefixConverterWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 600 : 700, sh * 0.85) }) },
-  [WidgetType.POSITIONS_MACHINE]: { title: 'Positions-Maskinen', component: PositionsMachineWidget, size: (m, sw, sh) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }) },
+  [WidgetType.NUMBER_LINE]: { 
+    title: 'Tallinje', 
+    component: NumberLineWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 800, sw * 0.95), h: clamp(m ? 450 : 380, sh * 0.85) }),
+    category: [MathArea.TAL, MathArea.SAMBAND],
+    subCategory: MathSubArea.RELATIONS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.RULER]: { 
+    title: 'Linjal', 
+    component: RulerWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 350 : 600, sw * 0.95), h: 180 }),
+    category: [],
+    subCategory: MathSubArea.RELATIONS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.PROTRACTOR]: { 
+    title: 'Gradskiva', 
+    component: ProtractorWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 350 : 450, sw * 0.95), h: 280 }),
+    category: [],
+    subCategory: MathSubArea.RELATIONS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.FRACTION]: { 
+    title: 'Bråk', 
+    component: FractionWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 550, sw * 0.95), h: clamp(m ? 650 : 450, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.DECIMAL_FORMS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.COORDINATES]: { 
+    title: 'Koordinatsystem', 
+    component: CoordinatesWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 700, sw * 0.95), h: clamp(m ? 650 : 500, sh * 0.85) }),
+    category: [MathArea.GEOMETRI, MathArea.SAMBAND],
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.PROBABILITY]: { 
+    title: 'Sannolikhet', 
+    component: ProbabilityWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }),
+    category: [MathArea.STATISTIK],
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.NUMBER_OF_DAY]: { 
+    title: 'Dagens Tal', 
+    component: NumberDayWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 450, sw * 0.95), h: clamp(m ? 700 : 750, sh * 0.85) }),
+    category: [],
+    subCategory: MathSubArea.RELATIONS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.EQUATION]: { 
+    title: 'Ekvationer', 
+    component: EquationWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }),
+    category: [MathArea.ALGEBRA],
+    difficulty: Difficulty.ABSTRACTING,
+  },
+  [WidgetType.FORMULAS]: { 
+    title: 'Formler', 
+    component: FormulaWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }),
+    category: [MathArea.ALGEBRA, MathArea.SAMBAND],
+    difficulty: Difficulty.FORMAL,
+  },
+  [WidgetType.CALCULATOR]: { 
+    title: 'Räknare', 
+    component: CalculatorWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(340, sw * 0.95), h: clamp(m ? 520 : 580, sh * 0.85) }),
+    category: [],
+    subCategory: MathSubArea.DECIMAL_FORMS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.PERCENTAGE]: { 
+    title: 'Procent', 
+    component: PercentageWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 700, sw * 0.95), h: clamp(m ? 650 : 520, sh * 0.85) }),
+    category: [MathArea.TAL, MathArea.SAMBAND],
+    subCategory: MathSubArea.DECIMAL_FORMS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.BASE_10]: { 
+    title: 'Bas-klossar', 
+    component: Base10Widget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 750 : 550, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.POSITIONS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.HUNDRED_CHART]: { 
+    title: 'Hundrarutan', 
+    component: HundredChartWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 500, sw * 0.95), h: clamp(m ? 600 : 650, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.PATTERNS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.NUMBER_HOUSE]: { 
+    title: 'Tal-huset', 
+    component: NumberHouseWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(360, sw * 0.95), h: clamp(m ? 550 : 580, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.OPERATIONS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.NUMBER_BEADS]: { 
+    title: 'Pärlband', 
+    component: NumberBeadsWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 550 : 720, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.RELATIONS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.SHAPES]: { 
+    title: 'Former', 
+    component: ShapesWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 500, sw * 0.95), h: clamp(m ? 700 : 580, sh * 0.85) }),
+    category: [MathArea.GEOMETRI],
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.FRACTION_BARS]: { 
+    title: 'Bråkstavar', 
+    component: FractionBarsWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 800, sw * 0.95), h: clamp(m ? 700 : 550, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.DECIMAL_FORMS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.MATH_WORKSHOP]: { 
+    title: 'Matte-verkstad', 
+    component: MathWorkshopWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 650 : 600, sh * 0.85) }),
+    category: [MathArea.PROBLEMLÖSNING],
+    difficulty: Difficulty.LABORATIVE,
+    klagSupport: true,
+  },
+  [WidgetType.PRIME_BUBBLES]: { 
+    title: 'Prim-Bubblor', 
+    component: PrimeBubblesWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 650 : 650, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.OPERATIONS,
+    difficulty: Difficulty.ABSTRACTING,
+  },
+  [WidgetType.CHANCE_GENERATOR]: { 
+    title: 'Slump-gen', 
+    component: ChanceGeneratorWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(360, sw * 0.95), h: clamp(m ? 650 : 580, sh * 0.85) }),
+    category: [MathArea.STATISTIK],
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.CLOCK]: { 
+    title: 'Klock-Labbet', 
+    component: ClockLabWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 700, sw * 0.95), h: clamp(m ? 650 : 550, sh * 0.85) }),
+    category: [MathArea.TAL, MathArea.GEOMETRI],
+    subCategory: MathSubArea.RELATIONS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.ECONOMY]: { 
+    title: 'Plånboken', 
+    component: EconomyWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 750, sw * 0.95), h: clamp(m ? 800 : 650, sh * 0.85) }),
+    category: [MathArea.TAL, MathArea.SAMBAND],
+    subCategory: MathSubArea.OPERATIONS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.MULTI_MATCH]: { 
+    title: 'Multi-Matchen', 
+    component: MultiMatchWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 450, sw * 0.95), h: clamp(m ? 700 : 750, sh * 0.85) }),
+    category: [MathArea.ALGEBRA],
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.TIERED_TASK]: { 
+    title: 'Nivå-Kortet', 
+    component: TieredTaskWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 650 : 650, sh * 0.85) }),
+    category: [MathArea.PROBLEMLÖSNING],
+    difficulty: Difficulty.ABSTRACTING,
+    klagSupport: true,
+  },
+  [WidgetType.PREFIX_ELEVATOR]: { 
+    title: 'Prefix-Växlaren', 
+    component: PrefixConverterWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 600 : 700, sh * 0.85) }),
+    category: [MathArea.SAMBAND, MathArea.TAL],
+    subCategory: MathSubArea.OPERATIONS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.POSITIONS_MACHINE]: { 
+    title: 'Positions-Maskinen', 
+    component: PositionsMachineWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.POSITIONS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.MAGIC_SQUARE]: { 
+    title: 'Magiska Kvadraten', 
+    component: MagicSquareWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 450, sw * 0.95), h: clamp(m ? 650 : 700, sh * 0.85) }),
+    category: [MathArea.TAL],
+    subCategory: MathSubArea.PATTERNS,
+    difficulty: Difficulty.CONCRETIZING,
+  },
+  [WidgetType.MATCHSTICK_RIDDLE]: { 
+    title: 'Tändstickor', 
+    component: MatchstickRiddleWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 650 : 500, sh * 0.85) }),
+    category: [MathArea.ALGEBRA],
+    difficulty: Difficulty.LABORATIVE,
+  },
 };
 
 const EXTRA_TOOLS = [
-  { type: WidgetType.MATH_WORKSHOP, icon: Icons.Tools, label: 'Verkstad' },
-  { type: WidgetType.PRIME_BUBBLES, icon: Icons.Zap, label: 'Prim-Bubblor' },
-  { type: WidgetType.TIERED_TASK, icon: Icons.Book, label: 'Nivå-Kort' },
-  { type: WidgetType.EQUATION, icon: Icons.Scale, label: 'Ekvation' },
-  { type: WidgetType.PROBABILITY, icon: Icons.Dice, label: 'Sannolikhet' },
-  { type: WidgetType.MULTI_MATCH, icon: Icons.Zap, label: 'Multi-Match' },
-  { type: WidgetType.CHANCE_GENERATOR, icon: Icons.Shuffle, label: 'Slump-gen' },
-  { type: WidgetType.CLOCK, icon: Icons.Clock, label: 'Klocka' },
-  { type: WidgetType.SHAPES, icon: Icons.Shapes, label: 'Former' },
+  { type: 'DRAWING', icon: Icons.Pencil, label: 'Rita' },
   { type: WidgetType.RULER, icon: Icons.Ruler, label: 'Linjal' },
   { type: WidgetType.PROTRACTOR, icon: Icons.Rotate, label: 'Gradskiva' },
   { type: WidgetType.CALCULATOR, icon: Icons.Math, label: 'Räknare' },
-  { type: 'DRAWING', icon: Icons.Pencil, label: 'Rita' },
 ];
 
 const App: React.FC = () => {
@@ -250,7 +441,12 @@ const App: React.FC = () => {
   return (
     <div className={`w-full h-full relative overflow-hidden transition-colors duration-500 ${getBackgroundClass()}`}>
       
-      <Logo darkMode={background === 'BLACK'} onPiClick={() => setIsPiCodeOpen(true)} />
+      <Sidebar 
+        onAddWidget={addWidget} 
+        widgetMetadata={WIDGET_CONFIG} 
+        onPiClick={() => setIsPiCodeOpen(true)}
+        darkMode={background === 'BLACK'}
+      />
 
       {/* Top Controls Bar */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[2000] flex items-start gap-2">
@@ -337,6 +533,7 @@ const App: React.FC = () => {
             initialHeight={widget.height}
             zIndex={widget.zIndex}
             transparent={transparentWidgets[widget.id]}
+            klagSupport={config.klagSupport}
             onClose={removeWidget}
             onFocus={bringToFront}
             onMove={updatePosition}

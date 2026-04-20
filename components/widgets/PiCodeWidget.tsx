@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Icons } from '../icons';
-
-const PI_DIGITS = "1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491298336733624406566430860213949463952247371907021798609437027705392171762931767523846748184676694051320005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235420199561121290219608640344181598136297747713099605187072113499999983729780499510597317328160963185950244594553469083026425223082533446850352619311881710100031378387528865875332083814206171776691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989";
+import { PI_DIGITS } from '../../src/constants/pi';
 
 const DIGIT_COLORS: Record<string, string> = {
   '0': 'bg-slate-200 text-slate-800',
@@ -33,6 +32,8 @@ const NOTES: Record<string, number> = {
 type Mode = 'LEARN' | 'BUILD' | 'ERASE';
 
 export const PiCodeWidget: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [piDigits, setPiDigits] = useState<string>(PI_DIGITS);
+  const [isLoadingExpanded, setIsLoadingExpanded] = useState(false);
   const [mode, setMode] = useState<Mode>('LEARN');
   const [isSynesthesia, setIsSynesthesia] = useState(false);
   const [isMelody, setIsMelody] = useState(false);
@@ -44,8 +45,71 @@ export const PiCodeWidget: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const [eraseSlider, setEraseSlider] = useState(0);
   const [classProgress, setClassProgress] = useState(124);
   const [recentContributions, setRecentContributions] = useState<{ id: number; amount: number }[]>([]);
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 15 });
 
   const audioContextRef = useRef<AudioContext | null>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+
+  const chunks = useMemo(() => {
+    const result = [];
+    let i = 0;
+    while (i < piDigits.length) {
+      const chunkSize = (i / 3) % 2 === 0 ? 3 : 4;
+      result.push({
+        text: piDigits.substring(i, i + chunkSize),
+        startIndex: i
+      });
+      i += chunkSize;
+    }
+    return result;
+  }, [piDigits]);
+
+  // Windowing logic for performance
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!railRef.current) return;
+      const { scrollLeft, clientWidth } = railRef.current;
+      
+      // Approximate width of a chunk (4 digits + gap) is around 300px
+      const chunkWidth = 300;
+      const start = Math.max(0, Math.floor(scrollLeft / chunkWidth) - 3);
+      const end = Math.min(chunks.length, Math.ceil((scrollLeft + clientWidth) / chunkWidth) + 3);
+      
+      setVisibleRange({ start, end });
+    };
+
+    const rail = railRef.current;
+    if (rail) {
+      rail.addEventListener('scroll', handleScroll);
+      // Initial calculation
+      setTimeout(handleScroll, 100);
+    }
+    return () => rail?.removeEventListener('scroll', handleScroll);
+  }, [chunks.length]);
+
+  // Fetch expanded Pi digits (100,000)
+  useEffect(() => {
+    const fetchExpandedPi = async () => {
+      setIsLoadingExpanded(true);
+      try {
+        const response = await fetch('https://www.angio.net/pi/digits/100000.txt');
+        if (response.ok) {
+          const text = await response.text();
+          // Remove "3." and any whitespace/newlines
+          const cleanedDigits = text.replace(/^3\./, '').replace(/\s+/g, '');
+          if (cleanedDigits.length > piDigits.length) {
+            setPiDigits(cleanedDigits);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch expanded Pi digits:', error);
+      } finally {
+        setIsLoadingExpanded(false);
+      }
+    };
+
+    fetchExpandedPi();
+  }, [piDigits.length]);
 
   const playNote = (digit: string) => {
     if (!isMelody) return;
@@ -69,23 +133,9 @@ export const PiCodeWidget: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     osc.stop(ctx.currentTime + 0.5);
   };
 
-  const chunks = useMemo(() => {
-    const result = [];
-    let i = 0;
-    while (i < PI_DIGITS.length) {
-      const chunkSize = (i / 3) % 2 === 0 ? 3 : 4;
-      result.push({
-        text: PI_DIGITS.substring(i, i + chunkSize),
-        startIndex: i
-      });
-      i += chunkSize;
-    }
-    return result;
-  }, []);
-
   const handleSearch = () => {
     if (!searchQuery) return;
-    const index = PI_DIGITS.indexOf(searchQuery);
+    const index = piDigits.indexOf(searchQuery);
     setSearchResult(index !== -1 ? index : null);
     
     if (index !== -1) {
@@ -117,7 +167,7 @@ export const PiCodeWidget: React.FC<{ onClose: () => void }> = ({ onClose }) => 
 
   const handleDigitInput = (digit: string) => {
     const nextIndex = userDigits.length;
-    if (PI_DIGITS[nextIndex] === digit) {
+    if (piDigits[nextIndex] === digit) {
       setUserDigits(prev => prev + digit);
       playNote(digit);
     } else {
@@ -166,13 +216,26 @@ export const PiCodeWidget: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       </button>
 
       {/* Header */}
-      <div className="text-center mb-12">
+      <div className="text-center mb-12 relative">
         <h1 className="text-5xl font-black text-white mb-2 tracking-tighter">
           PI<span className="text-blue-500">-</span>KODEN
         </h1>
-        <p className="text-slate-400 font-medium uppercase tracking-[0.3em] text-xs">
-          Bemästra det irrationella
-        </p>
+        <div className="flex items-center justify-center gap-3">
+          <p className="text-slate-400 font-medium uppercase tracking-[0.3em] text-xs">
+            Bemästra det irrationella
+          </p>
+          {isLoadingExpanded ? (
+            <div className="flex items-center gap-2 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full animate-pulse">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              <span className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">Laddar 100k...</span>
+            </div>
+          ) : piDigits.length > 10000 && (
+            <div className="flex items-center gap-2 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+              <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">100 000 decimaler redo</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Display Area */}
@@ -187,48 +250,63 @@ export const PiCodeWidget: React.FC<{ onClose: () => void }> = ({ onClose }) => 
         </div>
 
         {/* Infinity Rail */}
-        <div className="ml-32 overflow-x-auto no-scrollbar py-12 flex items-center gap-8 px-12">
-          {chunks.map((chunk, chunkIdx) => {
-            const isCompleted = mode === 'BUILD' && userDigits.length > chunk.startIndex;
-            const isCurrent = mode === 'BUILD' && userDigits.length >= chunk.startIndex && userDigits.length < chunk.startIndex + chunk.text.length;
-            
-            return (
-              <div 
-                key={chunk.startIndex} 
-                id={`chunk-${chunk.startIndex}`}
-                className={`flex gap-2 transition-all duration-500 ${mode === 'BUILD' && !isCompleted && !isCurrent ? 'opacity-20 scale-90 blur-sm' : ''}`}
-              >
-                {chunk.text.split('').map((digit, digitIdx) => {
-                  const globalIdx = chunk.startIndex + digitIdx;
-                  const isErased = mode === 'ERASE' && erasedIndices.has(globalIdx);
-                  const isUserCorrect = mode === 'BUILD' && globalIdx < userDigits.length;
-                  
-                  return (
-                    <motion.div
-                      key={globalIdx}
-                      whileHover={{ scale: 1.1 }}
-                      onClick={() => mode === 'ERASE' && toggleErased(globalIdx)}
-                      className={`
-                        w-16 h-20 rounded-xl flex items-center justify-center text-3xl font-black shadow-lg border border-white/5 cursor-pointer relative
-                        ${isSynesthesia ? DIGIT_COLORS[digit] : 'bg-slate-700 text-white'}
-                        ${isErased ? 'bg-slate-600 !text-transparent' : ''}
-                        ${mode === 'BUILD' && !isUserCorrect ? 'bg-slate-800/50 text-slate-600 border-dashed' : ''}
-                        ${mode === 'BUILD' && isUserCorrect ? 'ring-2 ring-emerald-500 ring-offset-4 ring-offset-slate-800' : ''}
-                        ${highlightedRange && globalIdx >= highlightedRange.start && globalIdx < highlightedRange.end ? 'ring-4 ring-blue-400 ring-offset-4 ring-offset-slate-900 z-20 scale-110 shadow-[0_0_30px_rgba(96,165,250,0.6)]' : ''}
-                      `}
-                    >
-                      {isErased ? '?' : (mode === 'BUILD' ? (isUserCorrect ? digit : '_') : digit)}
-                      {highlightedRange && globalIdx === highlightedRange.start && (
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap font-bold animate-bounce">
-                          HÄR! 📍
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })}
-              </div>
-            );
-          })}
+        <div 
+          ref={railRef}
+          className="ml-32 overflow-x-auto no-scrollbar py-12 flex items-center px-12 relative"
+        >
+          {/* Spacer to maintain scroll width */}
+          <div 
+            className="absolute top-0 left-0 h-full pointer-events-none" 
+            style={{ width: chunks.length * 300 }} 
+          />
+          
+          <div 
+            className="flex items-center gap-8"
+            style={{ transform: `translateX(${visibleRange.start * 300}px)` }}
+          >
+            {chunks.slice(visibleRange.start, visibleRange.end).map((chunk, chunkIdx) => {
+              const isCompleted = mode === 'BUILD' && userDigits.length > chunk.startIndex;
+              const isCurrent = mode === 'BUILD' && userDigits.length >= chunk.startIndex && userDigits.length < chunk.startIndex + chunk.text.length;
+              
+              return (
+                <div 
+                  key={chunk.startIndex} 
+                  id={`chunk-${chunk.startIndex}`}
+                  className={`flex gap-2 transition-all duration-500 shrink-0 ${mode === 'BUILD' && !isCompleted && !isCurrent ? 'opacity-20 scale-90 blur-sm' : ''}`}
+                  style={{ width: chunk.text.length * 64 + (chunk.text.length - 1) * 8 }}
+                >
+                  {chunk.text.split('').map((digit, digitIdx) => {
+                    const globalIdx = chunk.startIndex + digitIdx;
+                    const isErased = mode === 'ERASE' && erasedIndices.has(globalIdx);
+                    const isUserCorrect = mode === 'BUILD' && globalIdx < userDigits.length;
+                    
+                    return (
+                      <motion.div
+                        key={globalIdx}
+                        whileHover={{ scale: 1.1 }}
+                        onClick={() => mode === 'ERASE' && toggleErased(globalIdx)}
+                        className={`
+                          w-16 h-20 rounded-xl flex items-center justify-center text-3xl font-black shadow-lg border border-white/5 cursor-pointer relative shrink-0
+                          ${isSynesthesia ? DIGIT_COLORS[digit] : 'bg-slate-700 text-white'}
+                          ${isErased ? 'bg-slate-600 !text-transparent' : ''}
+                          ${mode === 'BUILD' && !isUserCorrect ? 'bg-slate-800/50 text-slate-600 border-dashed' : ''}
+                          ${mode === 'BUILD' && isUserCorrect ? 'ring-2 ring-emerald-500 ring-offset-4 ring-offset-slate-800' : ''}
+                          ${highlightedRange && globalIdx >= highlightedRange.start && globalIdx < highlightedRange.end ? 'ring-4 ring-blue-400 ring-offset-4 ring-offset-slate-900 z-20 scale-110 shadow-[0_0_30px_rgba(96,165,250,0.6)]' : ''}
+                        `}
+                      >
+                        {isErased ? '?' : (mode === 'BUILD' ? (isUserCorrect ? digit : '_') : digit)}
+                        {highlightedRange && globalIdx === highlightedRange.start && (
+                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap font-bold animate-bounce">
+                            HÄR! 📍
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

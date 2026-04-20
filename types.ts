@@ -26,6 +26,40 @@ export enum WidgetType {
   TIERED_TASK = 'TIERED_TASK',
   PREFIX_ELEVATOR = 'PREFIX_ELEVATOR',
   POSITIONS_MACHINE = 'POSITIONS_MACHINE',
+  MAGIC_SQUARE = 'MAGIC_SQUARE',
+  MATCHSTICK_RIDDLE = 'MATCHSTICK_RIDDLE',
+}
+
+export enum MathArea {
+  TAL = 'TAL',
+  ALGEBRA = 'ALGEBRA',
+  GEOMETRI = 'GEOMETRI',
+  STATISTIK = 'STATISTIK',
+  SAMBAND = 'SAMBAND',
+  PROBLEMLÖSNING = 'PROBLEMLÖSNING',
+}
+
+export enum Difficulty {
+  LABORATIVE = 'LABORATIVE',
+  CONCRETIZING = 'CONCRETIZING',
+  ABSTRACTING = 'ABSTRACTING',
+  FORMAL = 'FORMAL',
+}
+
+export enum MathSubArea {
+  // Subcategories for TAL
+  POSITIONS = 'Positions- och platsvärdessystemet',
+  DECIMAL_FORMS = 'Decimaltal och tals olika former',
+  OPERATIONS = 'Operationer och beräkningsstrategier',
+  RELATIONS = 'Relationer mellan tal och storheter',
+  PATTERNS = 'Mönster i talsystemet',
+}
+
+export interface WidgetMetadata {
+  category: MathArea[];
+  subCategory?: MathSubArea;
+  difficulty: Difficulty;
+  klagSupport?: boolean;
 }
 
 export interface WidgetInstance {

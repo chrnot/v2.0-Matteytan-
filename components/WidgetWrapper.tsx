@@ -12,6 +12,7 @@ interface WidgetWrapperProps {
   initialHeight?: number;
   zIndex: number;
   transparent?: boolean;
+  klagSupport?: boolean;
   onClose: (id: string) => void;
   onFocus: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
@@ -28,6 +29,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   initialHeight = 300,
   zIndex,
   transparent = false,
+  klagSupport = false,
   onClose,
   onFocus,
   onMove,
@@ -39,6 +41,14 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   
+  const [klagMode, setKlagMode] = useState<'NONE' | 'KONKRET' | 'LOGISK' | 'ALGEBRAISK' | 'GRAFISK'>('NONE');
+  const [klagContent, setKlagContent] = useState<Record<string, string>>({
+    'KONKRET': '',
+    'LOGISK': '',
+    'ALGEBRAISK': '',
+    'GRAFISK': '',
+  });
+
   const dragStart = useRef({ x: 0, y: 0 });
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -230,6 +240,27 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
             {title}
           </span>
           <div className="flex items-center gap-1">
+            {klagSupport && (
+              <div className="flex items-center bg-slate-200/50 p-0.5 rounded-lg mr-2">
+                {[
+                  { mode: 'KONKRET', label: 'K', title: 'Konkret handlingsform' },
+                  { mode: 'LOGISK', label: 'L', title: 'Logisk/språklig form' },
+                  { mode: 'ALGEBRAISK', label: 'A', title: 'Algebraisk/symbolisk form' },
+                  { mode: 'GRAFISK', label: 'G', title: 'Grafisk/visuell form' },
+                ].map((item) => (
+                  <button
+                    key={item.mode}
+                    onClick={() => setKlagMode(prev => prev === item.mode ? 'NONE' : item.mode as any)}
+                    className={`w-6 h-6 flex items-center justify-center rounded text-[10px] font-black transition-all ${
+                      klagMode === item.mode ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-300'
+                    }`}
+                    title={item.title}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); onClose(id); }}
               className="p-2 hover:bg-red-100 text-slate-400 hover:text-red-500 rounded transition-colors"
@@ -266,6 +297,61 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
         <div className="h-full w-full">
             {children}
         </div>
+
+        {/* KLAG Overlay */}
+        {klagMode !== 'NONE' && (
+          <div className="absolute inset-0 bg-white/95 backdrop-blur-md z-40 p-6 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-sm">
+                  {klagMode.charAt(0)}
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-800">
+                    {klagMode.charAt(0) + klagMode.slice(1).toLowerCase()}
+                  </h4>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    {klagMode === 'KONKRET' && 'Laborativt & Handlingsburet'}
+                    {klagMode === 'LOGISK' && 'Språklig & Logisk förklaring'}
+                    {klagMode === 'ALGEBRAISK' && 'Symboler & Matematiska uttryck'}
+                    {klagMode === 'GRAFISK' && 'Diagram, bilder & visualiseringar'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setKlagMode('NONE')}
+                className="p-1 hover:bg-slate-100 rounded-full text-slate-400"
+              >
+                <Icons.X size={16} />
+              </button>
+            </div>
+            
+            <textarea
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none font-medium placeholder:text-slate-300"
+              placeholder={`Dokumentera din ${klagMode.toLowerCase()}a representation här...`}
+              value={klagContent[klagMode]}
+              onChange={(e) => setKlagContent(prev => ({ ...prev, [klagMode]: e.target.value }))}
+            />
+            
+            <div className="mt-4 flex items-center justify-between">
+               <div className="flex -space-x-1">
+                  {['K', 'L', 'A', 'G'].map(char => (
+                    <div key={char} className={`w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-black ${klagContent[
+                      char === 'K' ? 'KONKRET' : char === 'L' ? 'LOGISK' : char === 'A' ? 'ALGEBRAISK' : 'GRAFISK'
+                    ] ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                      {char}
+                    </div>
+                  ))}
+               </div>
+               <button 
+                onClick={() => setKlagMode('NONE')}
+                className="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors"
+               >
+                 Spara & Stäng
+               </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {!transparent && (

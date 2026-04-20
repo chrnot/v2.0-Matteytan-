@@ -3,11 +3,12 @@ import React from 'react';
 interface LogoProps {
   darkMode?: boolean;
   onPiClick?: () => void;
+  isSidebar?: boolean;
 }
 
-export const Logo: React.FC<LogoProps> = ({ darkMode, onPiClick }) => {
+export const Logo: React.FC<LogoProps> = ({ darkMode, onPiClick, isSidebar }) => {
   return (
-    <div className="absolute top-6 left-6 z-30 flex items-center gap-3 select-none transition-opacity duration-500">
+    <div className={`${isSidebar ? 'relative' : 'absolute top-6 left-6'} z-30 flex items-center gap-3 select-none transition-opacity duration-500`}>
        {/* Icon Container */}
        <div 
           onClick={onPiClick}
