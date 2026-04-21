@@ -5,11 +5,66 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+:root {
+  --surface-primary: #FFFFFF;
+  --text-main: #1A1A1A;
+  --brand-accent: #0056b3;
+  --brand-secondary: #e9ecef;
+  --math-negative-red: #CC0000;
+  
+  --math-col-purple: #a855f7;
+  --math-col-purple-light: #f3e8ff;
+  --math-col-green: #22c55e;
+  --math-col-green-light: #f0fdf4;
+  --math-col-blue: #3b82f6;
+  --math-col-blue-light: #eff6ff;
+  --math-col-orange: #f97316;
+  --math-col-orange-light: #fff7ed;
+  --math-col-red: #ef4444;
+  --math-col-red-light: #fef2f2;
+  --math-col-pink: #ec4899;
+  --math-col-pink-light: #fdf2f8;
+  --math-col-rose: #f43f5e;
+  --math-col-rose-light: #fff1f2;
+
+  --sidebar-bg: rgba(255, 255, 255, 0.95);
+  --sidebar-border: #e2e8f0;
+  --sidebar-hover: #f1f5f9;
+}
+
+.dark {
+  --surface-primary: #121212;
+  --text-main: #F5F5F5;
+  --brand-accent: #66b3ff;
+  --brand-secondary: #2d2d2d;
+  --math-negative-red: #FF6666;
+
+  --math-col-purple: #c084fc;
+  --math-col-purple-light: #3b076433;
+  --math-col-green: #4ade80;
+  --math-col-green-light: #052e1633;
+  --math-col-blue: #60a5fa;
+  --math-col-blue-light: #17255433;
+  --math-col-orange: #fb923c;
+  --math-col-orange-light: #43140733;
+  --math-col-red: #f87171;
+  --math-col-red-light: #450a0a33;
+  --math-col-pink: #f472b6;
+  --math-col-pink-light: #50072433;
+  --math-col-rose: #fb7185;
+  --math-col-rose-light: #4c051933;
+
+  --sidebar-bg: rgba(18, 18, 18, 0.95);
+  --sidebar-border: #334155;
+  --sidebar-hover: #1e293b;
+}
+
 @layer base {
   body, html, #root {
     height: 100%;
     margin: 0;
     overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
@@ -39,6 +94,14 @@
   background-image: url('data:image/svg+xml,%3Csvg width="40" height="40" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M 40 0 L 0 0 0 40" fill="none" stroke="%23cbd5e1" stroke-width="1"/%3E%3C/svg%3E');
 }
 
+.dark .bg-grid-pattern {
+  background-image: url('data:image/svg+xml,%3Csvg width="40" height="40" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M 40 0 L 0 0 0 40" fill="none" stroke="%23334155" stroke-width="1"/%3E%3C/svg%3E');
+}
+
 .bg-dot-pattern {
   background-image: url('data:image/svg+xml,%3Csvg width="20" height="20" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="1" cy="1" r="1" fill="%23cbd5e1"/%3E%3C/svg%3E');
+}
+
+.dark .bg-dot-pattern {
+  background-image: url('data:image/svg+xml,%3Csvg width="20" height="20" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="1" cy="1" r="1" fill="%23334155"/%3E%3C/svg%3E');
 }

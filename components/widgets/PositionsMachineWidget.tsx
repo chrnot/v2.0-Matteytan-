@@ -16,13 +16,13 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { id: 'th', power: 3, label: 'Tusental', fraction: '1000/1', decimal: '1000', color: 'bg-purple-500', bgColor: 'bg-purple-50', icon: '📦' },
-  { id: 'h', power: 2, label: 'Hundratal', fraction: '100/1', decimal: '100', color: 'bg-green-500', bgColor: 'bg-green-50', icon: '🟦' },
-  { id: 't', power: 1, label: 'Tiotal', fraction: '10/1', decimal: '10', color: 'bg-blue-500', bgColor: 'bg-blue-50', icon: '📏' },
-  { id: 'e', power: 0, label: 'Ental', fraction: '1/1', decimal: '1', color: 'bg-orange-500', bgColor: 'bg-orange-50', icon: '🧊' },
-  { id: 'dec', power: -1, label: 'Tiondelar', fraction: '1/10', decimal: '0,1', color: 'bg-red-500', bgColor: 'bg-red-50', icon: '🍰' },
-  { id: 'hun', power: -2, label: 'Hundradelar', fraction: '1/100', decimal: '0,01', color: 'bg-pink-500', bgColor: 'bg-pink-50', icon: '🍪' },
-  { id: 'mil', power: -3, label: 'Tusendelar', fraction: '1/1000', decimal: '0,001', color: 'bg-rose-500', bgColor: 'bg-rose-50', icon: '✨' },
+  { id: 'th', power: 3, label: 'Tusental', fraction: '1000/1', decimal: '1000', color: 'var(--math-col-purple)', bgColor: 'var(--math-col-purple-light)', icon: '📦' },
+  { id: 'h', power: 2, label: 'Hundratal', fraction: '100/1', decimal: '100', color: 'var(--math-col-green)', bgColor: 'var(--math-col-green-light)', icon: '🟦' },
+  { id: 't', power: 1, label: 'Tiotal', fraction: '10/1', decimal: '10', color: 'var(--math-col-blue)', bgColor: 'var(--math-col-blue-light)', icon: '📏' },
+  { id: 'e', power: 0, label: 'Ental', fraction: '1/1', decimal: '1', color: 'var(--math-col-orange)', bgColor: 'var(--math-col-orange-light)', icon: '🧊' },
+  { id: 'dec', power: -1, label: 'Tiondelar', fraction: '1/10', decimal: '0,1', color: 'var(--math-col-red)', bgColor: 'var(--math-col-red-light)', icon: '🍰' },
+  { id: 'hun', power: -2, label: 'Hundradelar', fraction: '1/100', decimal: '0,01', color: 'var(--math-col-pink)', bgColor: 'var(--math-col-pink-light)', icon: '🍪' },
+  { id: 'mil', power: -3, label: 'Tusendelar', fraction: '1/1000', decimal: '0,001', color: 'var(--math-col-rose)', bgColor: 'var(--math-col-rose-light)', icon: '✨' },
 ];
 
 export const PositionsMachineWidget: React.FC = () => {
@@ -181,17 +181,17 @@ export const PositionsMachineWidget: React.FC = () => {
   }, [totalValue, challenge]);
 
   return (
-    <div className="flex flex-col h-full bg-white select-none overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--surface-primary)] text-[var(--text-main)] select-none overflow-hidden transition-colors duration-300">
       {/* Header Controls */}
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="p-4 border-b border-[var(--sidebar-border)] flex items-center justify-between bg-[var(--brand-secondary)]/50">
         <div className="flex items-center gap-4">
-          <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex bg-[var(--surface-primary)] p-1 rounded-xl shadow-sm border border-[var(--sidebar-border)]">
             {(['TEXT', 'FRACTION', 'DECIMAL'] as HeaderMode[]).map(mode => (
               <button
                 key={mode}
                 onClick={() => setHeaderMode(mode)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  headerMode === mode ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'
+                  headerMode === mode ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-[var(--sidebar-hover)]'
                 }`}
               >
                 {mode === 'TEXT' ? 'Namn' : mode === 'FRACTION' ? 'Bråk' : 'Decimal'}
@@ -201,21 +201,21 @@ export const PositionsMachineWidget: React.FC = () => {
           
           <button
             onClick={generateChallenge}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--surface-primary)] border border-[var(--sidebar-border)] rounded-xl shadow-sm hover:bg-[var(--sidebar-hover)] transition-all active:scale-95"
           >
             <Icons.Trophy size={16} className="text-amber-500" />
-            <span className="text-xs font-bold text-slate-700">Ny utmaning</span>
+            <span className="text-xs font-bold text-[var(--text-main)] opacity-70">Ny utmaning</span>
           </button>
 
           <button
             onClick={clearAll}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all active:scale-95 text-slate-400"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--surface-primary)] border border-[var(--sidebar-border)] rounded-xl shadow-sm hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-95 text-slate-400"
           >
             <Icons.Trash size={16} />
             <span className="text-xs font-bold">Rensa allt</span>
           </button>
 
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+          <div className="flex items-center gap-2 bg-[var(--surface-primary)] border border-[var(--sidebar-border)] rounded-xl px-3 py-1 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
             <Icons.Pencil size={14} className="text-slate-400" />
             <input
               type="text"
@@ -226,7 +226,7 @@ export const PositionsMachineWidget: React.FC = () => {
                 if (val) applyCustomNumber(val);
               }}
               placeholder="Skriv tal..."
-              className="w-24 bg-transparent border-none outline-none text-xs font-bold text-slate-700 placeholder:text-slate-300"
+              className="w-24 bg-transparent border-none outline-none text-xs font-bold text-[var(--text-main)] placeholder:text-slate-300"
             />
           </div>
 
@@ -234,8 +234,8 @@ export const PositionsMachineWidget: React.FC = () => {
             onClick={() => setIsInfoOpen(!isInfoOpen)}
             className={`p-2 rounded-xl transition-all active:scale-95 flex items-center gap-2 ${
               isInfoOpen 
-                ? 'bg-slate-900 text-white shadow-lg' 
-                : 'bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 shadow-sm'
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'bg-[var(--surface-primary)] border border-[var(--sidebar-border)] text-slate-400 hover:text-[var(--text-main)] hover:border-blue-500 shadow-sm'
             }`}
           >
             <Icons.Info size={18} />
@@ -245,7 +245,7 @@ export const PositionsMachineWidget: React.FC = () => {
 
         <div className="flex flex-col items-end">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Totalt Värde</div>
-          <div className="text-2xl font-black text-slate-800 tabular-nums">
+          <div className="text-2xl font-black text-[var(--text-main)] tabular-nums">
             {totalValue.toLocaleString('sv-SE', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
           </div>
         </div>
@@ -396,7 +396,8 @@ export const PositionsMachineWidget: React.FC = () => {
           <React.Fragment key={col.id}>
             <motion.div 
               animate={errorHint?.colId === col.id ? { x: [-2, 2, -2, 2, 0] } : {}}
-              className={`flex-1 flex flex-col rounded-2xl border-2 border-dashed border-slate-200 relative group transition-colors hover:border-slate-300 ${col.bgColor}`}
+              className="flex-1 flex flex-col rounded-2xl border-2 border-dashed border-[var(--sidebar-border)] relative group transition-colors overflow-hidden"
+              style={{ backgroundColor: col.bgColor }}
             >
               {/* Error Hint Bubble */}
               <AnimatePresence>
@@ -414,26 +415,27 @@ export const PositionsMachineWidget: React.FC = () => {
               </AnimatePresence>
 
               {/* Header */}
-              <div className="p-2 text-center border-b border-slate-200/50 bg-white/50 rounded-t-2xl">
+              <div className="p-2 text-center border-b border-[var(--sidebar-border)]/50 bg-[var(--surface-primary)]/50 rounded-t-2xl">
                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-tighter truncate">
                   {headerMode === 'TEXT' ? col.label : headerMode === 'FRACTION' ? col.fraction : col.decimal}
                 </div>
               </div>
 
               {/* Bank Area (Source) */}
-              <div className="p-2 flex justify-center border-b border-slate-100 bg-white/30">
+              <div className="p-2 flex justify-center border-b border-[var(--sidebar-border)]/30 bg-[var(--surface-primary)]/30">
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => addBlock(col.id)}
-                  className={`w-8 h-8 rounded-lg shadow-sm border-2 border-white flex items-center justify-center cursor-pointer ${col.color}`}
+                  className="w-8 h-8 rounded-lg shadow-sm border-2 border-white/20 flex items-center justify-center cursor-pointer"
+                  style={{ backgroundColor: col.color }}
                 >
                   <Icons.Plus size={14} className="text-white" />
                 </motion.div>
               </div>
 
               {/* Background Illustration */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] text-8xl">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] text-8xl">
                 {col.icon}
               </div>
 
@@ -456,7 +458,8 @@ export const PositionsMachineWidget: React.FC = () => {
                       e.preventDefault();
                       removeBlock(col.id);
                     }}
-                    className={`w-10 h-10 rounded-xl shadow-sm border-2 border-white flex items-center justify-center cursor-pointer active:scale-95 transition-transform ${col.color}`}
+                    className="w-10 h-10 rounded-xl shadow-sm border-2 border-white/20 flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+                    style={{ backgroundColor: col.color }}
                   >
                     <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white font-black text-xs">
                       1
@@ -472,8 +475,11 @@ export const PositionsMachineWidget: React.FC = () => {
               </div>
 
               {/* Digit Display */}
-              <div className={`p-3 text-center border-t-4 ${col.color.replace('bg-', 'border-')} bg-white rounded-b-2xl shadow-[0_-4px_10px_rgba(0,0,0,0.02)]`}>
-                <div className="text-3xl font-black text-slate-800 tabular-nums">
+              <div 
+                className="p-3 text-center border-t-4 bg-[var(--surface-primary)] rounded-b-2xl shadow-[0_-4px_10px_rgba(0,0,0,0.02)]"
+                style={{ borderTopColor: col.color }}
+              >
+                <div className="text-3xl font-black text-[var(--text-main)] tabular-nums">
                   {counts[col.id]}
                 </div>
               </div>
@@ -493,7 +499,8 @@ export const PositionsMachineWidget: React.FC = () => {
                 <motion.div 
                   animate={{ scale: [1, 1.1, 1] }}
                   transition={{ repeat: Infinity, duration: 2 }}
-                  className="w-6 h-6 rounded-full bg-red-600 shadow-lg shadow-red-200 flex items-center justify-center text-white font-black text-xl leading-none"
+                  className="w-6 h-6 rounded-full shadow-lg flex items-center justify-center text-white font-black text-xl leading-none"
+                  style={{ backgroundColor: 'var(--math-col-red)' }}
                 >
                   ,
                 </motion.div>
@@ -504,16 +511,16 @@ export const PositionsMachineWidget: React.FC = () => {
       </div>
 
       {/* Zoom Ruler */}
-      <div className="h-24 bg-slate-50 border-t border-slate-200 relative px-12 flex flex-col justify-center">
+      <div className="h-24 bg-[var(--brand-secondary)]/50 border-t border-[var(--sidebar-border)] relative px-12 flex flex-col justify-center">
         <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 text-center">Zoom-Linjalen</div>
-        <div className="h-1 bg-slate-200 rounded-full relative">
+        <div className="h-1 bg-[var(--sidebar-border)] rounded-full relative">
           {/* Ticks */}
           {Array.from({ length: 11 }).map((_, i) => {
             const tickValue = Math.floor(totalValue) - 5 + i;
             return (
               <div 
                 key={i} 
-                className="absolute h-3 w-0.5 bg-slate-300 -top-1" 
+                className="absolute h-3 w-0.5 bg-[var(--sidebar-border)] -top-1" 
                 style={{ left: `${i * 10}%` }}
               >
                 <span className="absolute top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-slate-400">
@@ -538,7 +545,7 @@ export const PositionsMachineWidget: React.FC = () => {
       </div>
 
       {/* Footer Instructions */}
-      <div className="p-3 bg-slate-800 text-white/50 text-[10px] font-medium flex justify-center gap-8">
+      <div className="p-3 bg-[var(--brand-secondary)] text-[var(--text-main)] opacity-50 text-[10px] font-medium flex justify-center gap-8 border-t border-[var(--sidebar-border)]">
         <div className="flex items-center gap-2">
           <kbd className="bg-white/10 px-1.5 py-0.5 rounded border border-white/10 text-white">Klicka</kbd>
           <span>Lägg till block</span>

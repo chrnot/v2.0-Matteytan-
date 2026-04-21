@@ -63,7 +63,10 @@ import {
   Menu,
   Check,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Sun,
+  Moon,
+  FlaskConical
 } from 'lucide-react';
 
 export const Icons = {
@@ -132,5 +135,8 @@ export const Icons = {
   Menu,
   Check,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Sun,
+  Moon,
+  Lab: FlaskConical
 };

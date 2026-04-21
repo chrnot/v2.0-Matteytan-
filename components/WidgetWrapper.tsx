@@ -209,7 +209,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
   const containerClasses = transparent 
     ? "fixed flex flex-col rounded-xl overflow-visible transition-all duration-500 ease-in-out max-w-[98vw] max-h-[90vh]"
-    : "fixed flex flex-col bg-white rounded-xl widget-shadow border border-slate-200 overflow-hidden transition-all duration-500 ease-in-out max-w-[98vw] max-h-[90vh]";
+    : "fixed flex flex-col bg-[var(--surface-primary)] rounded-xl widget-shadow border border-[var(--sidebar-border)] overflow-hidden transition-all duration-500 ease-in-out max-w-[98vw] max-h-[90vh]";
 
   // Disable transition during interaction
   const dynamicStyle = {
@@ -232,11 +232,11 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
     >
       {!transparent && (
         <div
-          className="h-10 bg-slate-50 border-b border-slate-200 flex items-center justify-between px-3 cursor-move select-none flex-shrink-0 touch-none"
+          className="h-10 bg-[var(--brand-secondary)] border-b border-[var(--sidebar-border)] flex items-center justify-between px-3 cursor-move select-none flex-shrink-0 touch-none"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
-          <span className="font-semibold text-slate-700 text-sm flex items-center gap-2 truncate pr-4 pointer-events-none">
+          <span className="font-semibold text-[var(--text-main)] text-sm flex items-center gap-2 truncate pr-4 pointer-events-none opacity-80">
             {title}
           </span>
           <div className="flex items-center gap-1">
@@ -272,9 +272,9 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       )}
 
       {transparent && (
-         <div className="absolute -top-10 left-0 flex gap-2 bg-white/90 backdrop-blur border border-slate-200 rounded-lg p-1 shadow-sm z-50">
+         <div className="absolute -top-10 left-0 flex gap-2 bg-[var(--surface-primary)]/90 backdrop-blur border border-[var(--sidebar-border)] rounded-lg p-1 shadow-sm z-50">
             <div 
-                className="p-2 cursor-move text-slate-500 hover:bg-slate-100 rounded touch-none"
+                className="p-2 cursor-move text-[var(--text-main)] opacity-60 hover:bg-[var(--sidebar-hover)] rounded touch-none"
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 title="Flytta"
@@ -292,7 +292,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
       <div className={`
         flex-1 relative
-        ${transparent ? 'p-0 bg-transparent' : 'p-2 sm:p-4 bg-white/95 backdrop-blur-sm overflow-auto'}
+        ${transparent ? 'p-0 bg-transparent' : 'p-2 sm:p-4 bg-[var(--surface-primary)]/50 backdrop-blur-sm overflow-auto text-[var(--text-main)]'}
       `}>
         <div className="h-full w-full">
             {children}
@@ -300,17 +300,17 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
         {/* KLAG Overlay */}
         {klagMode !== 'NONE' && (
-          <div className="absolute inset-0 bg-white/95 backdrop-blur-md z-40 p-6 flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+          <div className="absolute inset-0 bg-[var(--surface-primary)] backdrop-blur-md z-40 p-6 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4 border-b border-[var(--sidebar-border)] pb-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-sm">
                   {klagMode.charAt(0)}
                 </div>
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-800">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[var(--text-main)]">
                     {klagMode.charAt(0) + klagMode.slice(1).toLowerCase()}
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-medium">
+                  <p className="text-[10px] text-[var(--text-main)] opacity-50 font-medium">
                     {klagMode === 'KONKRET' && 'Laborativt & Handlingsburet'}
                     {klagMode === 'LOGISK' && 'Språklig & Logisk förklaring'}
                     {klagMode === 'ALGEBRAISK' && 'Symboler & Matematiska uttryck'}
@@ -320,14 +320,14 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
               </div>
               <button 
                 onClick={() => setKlagMode('NONE')}
-                className="p-1 hover:bg-slate-100 rounded-full text-slate-400"
+                className="p-1 hover:bg-[var(--sidebar-hover)] rounded-full text-slate-400"
               >
                 <Icons.X size={16} />
               </button>
             </div>
             
             <textarea
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none font-medium placeholder:text-slate-300"
+              className="flex-1 bg-[var(--brand-secondary)] border border-[var(--sidebar-border)] rounded-xl p-4 text-[var(--text-main)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none font-medium placeholder:text-slate-400/50"
               placeholder={`Dokumentera din ${klagMode.toLowerCase()}a representation här...`}
               value={klagContent[klagMode]}
               onChange={(e) => setKlagContent(prev => ({ ...prev, [klagMode]: e.target.value }))}

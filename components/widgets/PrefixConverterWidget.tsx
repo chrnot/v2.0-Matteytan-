@@ -247,31 +247,31 @@ export const PrefixConverterWidget: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 select-none overflow-hidden font-sans relative">
+    <div className="flex flex-col h-full bg-[var(--surface-primary)] text-[var(--text-main)] select-none overflow-hidden font-sans relative transition-colors duration-300">
       {/* Header / Controls */}
-      <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-50">
+      <div className="h-16 bg-[var(--surface-primary)] border-b border-[var(--sidebar-border)] flex items-center justify-between px-6 z-50">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+          <div className="flex bg-[var(--brand-secondary)] p-1 rounded-xl">
             <button 
               onClick={() => setIsPowerMode(false)}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${!isPowerMode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${!isPowerMode ? 'bg-[var(--surface-primary)] text-[var(--text-main)] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
               Standard
             </button>
             <button 
               onClick={() => setIsPowerMode(true)}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isPowerMode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isPowerMode ? 'bg-[var(--surface-primary)] text-[var(--text-main)] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
               Potens
             </button>
           </div>
 
-          <div className="h-6 w-px bg-slate-200" />
+          <div className="h-6 w-px bg-[var(--sidebar-border)]" />
 
           <select 
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className="bg-slate-50 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest outline-none text-slate-600 border border-slate-200 cursor-pointer hover:border-slate-300 transition-colors"
+            className="bg-[var(--surface-primary)] px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest outline-none text-[var(--text-main)] opacity-70 border border-[var(--sidebar-border)] cursor-pointer hover:border-blue-500 transition-colors"
           >
             <option value="m">Meter (m)</option>
             <option value="g">Gram (g)</option>
@@ -292,13 +292,13 @@ export const PrefixConverterWidget: React.FC = () => {
           </button>
           <button 
             onClick={() => setShowHelp(true)}
-            className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+            className="w-10 h-10 rounded-xl bg-[var(--surface-primary)] border border-[var(--sidebar-border)] text-slate-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
           >
             <Icons.Info size={20} />
           </button>
           <button 
             onClick={() => setShowSettings(!showSettings)}
-            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all shadow-sm ${showSettings ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200'}`}
+            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all shadow-sm ${showSettings ? 'bg-blue-500/10 border-blue-500/50 text-blue-500' : 'bg-[var(--surface-primary)] border-[var(--sidebar-border)] text-slate-400 hover:text-blue-600 hover:border-blue-200'}`}
           >
             <Icons.Settings size={20} />
           </button>
@@ -312,10 +312,10 @@ export const PrefixConverterWidget: React.FC = () => {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="absolute top-20 right-8 z-[100] w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 overflow-hidden"
+            className="absolute top-20 right-8 z-[100] w-72 bg-[var(--surface-primary)] rounded-2xl shadow-2xl border border-[var(--sidebar-border)] p-6 overflow-hidden"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Anpassa Skalan</h3>
+              <h3 className="text-sm font-black text-[var(--text-main)] uppercase tracking-widest">Anpassa Skalan</h3>
               <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600">
                 <Icons.X size={16} />
               </button>
@@ -327,14 +327,14 @@ export const PrefixConverterWidget: React.FC = () => {
                 <div className="grid grid-cols-1 gap-2">
                   <button 
                     onClick={() => applyPreset('common')}
-                    className="px-3 py-2 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-lg text-xs font-bold transition-colors text-left flex items-center justify-between"
+                    className="px-3 py-2 bg-[var(--brand-secondary)] hover:bg-blue-500/10 text-[var(--text-main)] hover:text-blue-500 rounded-lg text-xs font-bold transition-colors text-left flex items-center justify-between"
                   >
                     <span>Endast vanliga (m-k)</span>
                     <Icons.ChevronRight size={14} />
                   </button>
                   <button 
                     onClick={() => applyPreset('scientific')}
-                    className="px-3 py-2 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg text-xs font-bold transition-colors text-left flex items-center justify-between"
+                    className="px-3 py-2 bg-[var(--brand-secondary)] hover:bg-indigo-500/10 text-[var(--text-main)] hover:text-indigo-500 rounded-lg text-xs font-bold transition-colors text-left flex items-center justify-between"
                   >
                     <span>Vetenskaplig (n-T)</span>
                     <Icons.ChevronRight size={14} />
@@ -354,7 +354,7 @@ export const PrefixConverterWidget: React.FC = () => {
                         px-2 py-2 rounded-lg text-[10px] font-black transition-all border
                         ${enabledPrefixes.has(p.power) 
                           ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                          : 'bg-white text-slate-400 border-slate-200 opacity-50'}
+                          : 'bg-[var(--brand-secondary)] text-slate-400 border-[var(--sidebar-border)] opacity-50'}
                         ${p.power === 0 ? 'cursor-not-allowed' : 'hover:scale-105 active:scale-95'}
                       `}
                     >
@@ -371,7 +371,7 @@ export const PrefixConverterWidget: React.FC = () => {
       {/* Main Workspace Split */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side: Value Display */}
-        <div className="flex-1 flex flex-col items-center justify-center p-12 bg-white relative">
+        <div className="flex-1 flex flex-col items-center justify-center p-12 bg-[var(--surface-primary)] relative">
           <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
             <div className="w-full flex flex-col items-center">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">Aktuellt Värde</span>
@@ -388,14 +388,14 @@ export const PrefixConverterWidget: React.FC = () => {
                         className="flex items-center gap-6"
                       >
                         <div className="flex flex-col items-end">
-                          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100 mb-2">
+                          <div className="flex items-center gap-2 bg-[var(--brand-secondary)] p-2 rounded-2xl border border-[var(--sidebar-border)] mb-2">
                             <button 
                               onClick={() => {
                                 const newVal = Math.max(0, value - 1);
                                 setValue(newVal);
                                 setInputValue(newVal.toString());
                               }}
-                              className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
+                              className="w-10 h-10 rounded-xl bg-[var(--surface-primary)] flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
                             >
                               <Icons.Minus size={20} />
                             </button>
@@ -409,7 +409,7 @@ export const PrefixConverterWidget: React.FC = () => {
                                 if (!isNaN(parsed)) setValue(parsed);
                               }}
                               onBlur={() => setInputValue(value.toString())}
-                              className="w-40 bg-transparent text-center font-black text-4xl outline-none text-slate-800"
+                              className="w-40 bg-transparent text-center font-black text-4xl outline-none text-[var(--text-main)]"
                             />
                             <button 
                               onClick={() => {
@@ -417,7 +417,7 @@ export const PrefixConverterWidget: React.FC = () => {
                                 setValue(newVal);
                                 setInputValue(newVal.toString());
                               }}
-                              className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
+                              className="w-10 h-10 rounded-xl bg-[var(--surface-primary)] flex items-center justify-center text-slate-400 hover:text-blue-600 hover:shadow-md transition-all"
                             >
                               <Icons.Plus size={20} />
                             </button>
@@ -435,7 +435,7 @@ export const PrefixConverterWidget: React.FC = () => {
                             {currentPrefix.name}
                           </div>
                           {currentPrefix.power !== 0 && (
-                            <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[8px] font-black px-3 py-1 rounded-full whitespace-nowrap">
+                            <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--text-main)] text-[var(--surface-primary)] text-[8px] font-black px-3 py-1 rounded-full whitespace-nowrap shadow-lg">
                               KLICKA FÖR ATT PACKA UPP 📦
                             </div>
                           )}
@@ -448,7 +448,7 @@ export const PrefixConverterWidget: React.FC = () => {
                         animate={{ opacity: 1, width: 'auto' }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         onClick={handleUnpack}
-                        className="flex items-center gap-4 text-6xl font-black text-slate-800 whitespace-nowrap cursor-pointer hover:scale-105 transition-transform"
+                        className="flex items-center gap-4 text-6xl font-black text-[var(--text-main)] whitespace-nowrap cursor-pointer hover:scale-105 transition-transform"
                       >
                         <span>{value}</span>
                         <span className="text-blue-500">·</span>
@@ -466,7 +466,7 @@ export const PrefixConverterWidget: React.FC = () => {
                         key="calculated"
                         initial={{ opacity: 0, scale: 1.2 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="flex items-center gap-4 text-7xl font-black text-emerald-600"
+                        className="flex items-center gap-4 text-7xl font-black text-emerald-500"
                       >
                         <span>{formatDisplayValue(value * Math.pow(10, currentPrefix.power))}</span>
                         <span className="text-slate-400">{unit}</span>
@@ -475,7 +475,7 @@ export const PrefixConverterWidget: React.FC = () => {
                   </AnimatePresence>
                 </div>
 
-                <div className="h-px w-full max-w-md bg-slate-100 my-4" />
+                <div className="h-px w-full max-w-md bg-[var(--sidebar-border)] my-4" />
 
                 <div className="flex flex-col items-center">
                   <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-2">Motsvarar totalt</span>
@@ -497,7 +497,7 @@ export const PrefixConverterWidget: React.FC = () => {
                 exit={{ opacity: 0, scale: 1.1 }}
                 className="absolute inset-0 pointer-events-none flex items-center justify-center z-20"
               >
-                <div className="bg-white/95 backdrop-blur-md px-10 py-8 rounded-[40px] shadow-2xl border-2 border-blue-500 flex flex-col items-center gap-3">
+                <div className="bg-[var(--surface-primary)]/95 backdrop-blur-md px-10 py-8 rounded-[40px] shadow-2xl border-2 border-blue-500 flex flex-col items-center gap-3">
                   <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Växlar Prefix</div>
                   <div className="flex items-center gap-6">
                     <div className="flex flex-col items-center">
@@ -506,7 +506,7 @@ export const PrefixConverterWidget: React.FC = () => {
                     </div>
                     <Icons.ChevronRight className="text-blue-500" size={32} />
                     <div className="flex flex-col items-center">
-                      <span className="text-3xl font-black text-slate-900">{conversionArc.to.symbol || 'enhet'}</span>
+                      <span className="text-3xl font-black text-[var(--text-main)]">{conversionArc.to.symbol || 'enhet'}</span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase">{conversionArc.to.name}</span>
                     </div>
                   </div>
@@ -523,7 +523,7 @@ export const PrefixConverterWidget: React.FC = () => {
         </div>
 
         {/* Right Side: Challenge Panel */}
-        <div className="w-80 bg-slate-50 border-l border-slate-200 p-8 flex flex-col gap-6 overflow-y-auto">
+        <div className="w-80 bg-[var(--brand-secondary)]/30 border-l border-[var(--sidebar-border)] p-8 flex flex-col gap-6 overflow-y-auto">
           <AnimatePresence mode="wait">
             {task ? (
               <motion.div
@@ -533,9 +533,9 @@ export const PrefixConverterWidget: React.FC = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="flex flex-col gap-6"
               >
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <div className="bg-[var(--surface-primary)] rounded-3xl p-6 shadow-sm border border-[var(--sidebar-border)]">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
                       <Icons.Zap size={18} />
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Utmaning</span>
@@ -543,7 +543,7 @@ export const PrefixConverterWidget: React.FC = () => {
                   
                   <div className="space-y-4">
                     <div className="text-sm font-medium text-slate-500 leading-relaxed">
-                      Gör om <span className="text-slate-900 font-black">{task.value} {task.from.symbol}{task.unit}</span> till:
+                      Gör om <span className="text-[var(--text-main)] font-black">{task.value} {task.from.symbol}{task.unit}</span> till:
                     </div>
                     <div className="text-2xl font-black text-blue-600 leading-tight">
                       {getFullUnitName(task.to.name, task.unit)}
@@ -551,8 +551,8 @@ export const PrefixConverterWidget: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-blue-600/5 rounded-2xl p-4 border border-blue-100">
-                  <p className="text-[10px] font-bold text-blue-600 leading-relaxed">
+                <div className="bg-blue-500/5 rounded-2xl p-4 border border-blue-500/10">
+                  <p className="text-[10px] font-bold text-blue-500 leading-relaxed">
                     Tips: Klicka på <span className="font-black">{task.to.symbol || 'enhet'}</span> på skalan längst ner!
                   </p>
                 </div>
@@ -584,7 +584,7 @@ export const PrefixConverterWidget: React.FC = () => {
             className="absolute inset-0 z-[110] flex items-center justify-center p-8"
           >
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowHelp(false)} />
-            <div className="bg-white rounded-[40px] shadow-2xl p-10 max-w-lg relative z-10 border border-slate-100">
+            <div className="bg-[var(--surface-primary)] rounded-[40px] shadow-2xl p-10 max-w-lg relative z-10 border border-[var(--sidebar-border)]">
               <button 
                 onClick={() => setShowHelp(false)}
                 className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-600 transition-colors"
@@ -592,15 +592,15 @@ export const PrefixConverterWidget: React.FC = () => {
                 <Icons.X size={24} />
               </button>
               <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6">
+                <div className="w-16 h-16 rounded-3xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-6">
                   <Icons.Lightbulb size={32} />
                 </div>
-                <h3 className="text-2xl font-black text-slate-800 mb-4">Hur gör man?</h3>
-                <div className="space-y-4 text-slate-600 font-medium leading-relaxed">
+                <h3 className="text-2xl font-black text-[var(--text-main)] mb-4">Hur gör man?</h3>
+                <div className="space-y-4 text-[var(--text-main)] opacity-70 font-medium leading-relaxed">
                   <p>
-                    Varje steg på skalan är en <span className="text-blue-600 font-black">10-gånger</span> förändring.
+                    Varje steg på skalan är en <span className="text-blue-500 font-black">10-gånger</span> förändring.
                   </p>
-                  <div className="bg-slate-50 p-6 rounded-3xl text-sm space-y-2">
+                  <div className="bg-[var(--brand-secondary)] p-6 rounded-3xl text-sm space-y-2 border border-[var(--sidebar-border)]">
                     <p>⬅️ Gå till <span className="font-bold">vänster</span>: Flytta kommatecknet till <span className="font-bold">höger</span> (talet blir större).</p>
                     <p>➡️ Gå till <span className="font-bold">höger</span>: Flytta kommatecknet till <span className="font-bold">vänster</span> (talet blir mindre).</p>
                   </div>
@@ -610,7 +610,7 @@ export const PrefixConverterWidget: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setShowHelp(false)}
-                  className="mt-8 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all"
+                  className="mt-8 px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                 >
                   Jag fattar!
                 </button>
@@ -642,7 +642,7 @@ export const PrefixConverterWidget: React.FC = () => {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="absolute top-20 left-1/2 -translate-x-1/2 w-72 bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 z-50 overflow-hidden"
+            className="absolute top-20 left-1/2 -translate-x-1/2 w-72 bg-[var(--surface-primary)] rounded-3xl shadow-2xl border border-[var(--sidebar-border)] p-6 z-50 overflow-hidden"
           >
             <div className={`absolute top-0 right-0 w-16 h-16 ${hoveredPrefix.color} opacity-10 rounded-bl-full`} />
             <div className="flex items-center gap-3 mb-4">
@@ -651,18 +651,18 @@ export const PrefixConverterWidget: React.FC = () => {
               </div>
               <div>
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Prefix</div>
-                <div className="text-xl font-black text-slate-800 leading-none">{hoveredPrefix.name}</div>
+                <div className="text-xl font-black text-[var(--text-main)] leading-none">{hoveredPrefix.name}</div>
               </div>
             </div>
             <div className="space-y-3">
               <div>
                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Värde</div>
-                <div className="text-sm font-bold text-slate-600">{hoveredPrefix.description} ({isPowerMode ? hoveredPrefix.powerLabel : hoveredPrefix.multiplier})</div>
+                <div className="text-sm font-bold text-slate-500">{hoveredPrefix.description} ({isPowerMode ? hoveredPrefix.powerLabel : hoveredPrefix.multiplier})</div>
               </div>
-              <div className="h-px bg-slate-100" />
+              <div className="h-px bg-[var(--sidebar-border)]" />
               <div>
                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Exempel</div>
-                <p className="text-xs text-slate-500 leading-relaxed italic">"{hoveredPrefix.example}"</p>
+                <p className="text-xs text-slate-500 leading-relaxed italic opacity-70">"{hoveredPrefix.example}"</p>
               </div>
             </div>
           </motion.div>
@@ -671,15 +671,15 @@ export const PrefixConverterWidget: React.FC = () => {
 
       {/* Scale Area */}
       <div 
-        className="h-48 bg-slate-50 border-t border-slate-200 relative overflow-hidden"
+        className="h-48 bg-[var(--brand-secondary)]/30 border-t border-[var(--sidebar-border)] relative overflow-hidden"
         onWheel={handleWheel}
       >
         <div className="absolute top-4 left-8 flex items-center gap-4 z-10">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Skal-Linjen</div>
-          <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1 hover:bg-slate-50 rounded"><Icons.Minus size={14}/></button>
+          <div className="flex items-center gap-2 bg-[var(--surface-primary)] p-1 rounded-lg border border-[var(--sidebar-border)] shadow-sm">
+            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-1 hover:bg-[var(--sidebar-hover)] rounded"><Icons.Minus size={14}/></button>
             <div className="text-[9px] font-black w-8 text-center">{Math.round(zoom * 100)}%</div>
-            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1 hover:bg-slate-50 rounded"><Icons.Plus size={14}/></button>
+            <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1 hover:bg-[var(--sidebar-hover)] rounded"><Icons.Plus size={14}/></button>
           </div>
           <div className="text-[9px] font-bold text-slate-400 italic hidden sm:block">
             Ctrl + Scroll för att zooma
@@ -693,7 +693,7 @@ export const PrefixConverterWidget: React.FC = () => {
         >
           <div className="relative flex items-center">
             {/* Main Axis Line */}
-            <div className="absolute h-1 bg-slate-200 rounded-full w-[5000px] -translate-x-1/2" />
+            <div className="absolute h-1 bg-[var(--sidebar-border)] rounded-full w-[5000px] -translate-x-1/2" />
 
             <AnimatePresence mode="popLayout">
               {PREFIXES.map((p) => {
@@ -713,7 +713,7 @@ export const PrefixConverterWidget: React.FC = () => {
                     style={{ left: x }}
                   >
                     {/* Tick */}
-                    <div className={`w-1 h-4 rounded-full mb-4 ${isActive ? 'bg-blue-600' : 'bg-slate-300'}`} />
+                    <div className={`w-1 h-4 rounded-full mb-4 ${isActive ? 'bg-blue-600' : 'bg-[var(--sidebar-border)]'}`} />
                     
                     {/* Button */}
                     <motion.button
@@ -724,13 +724,13 @@ export const PrefixConverterWidget: React.FC = () => {
                       whileTap={{ scale: 0.9 }}
                       className={`
                         w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-lg transition-all
-                        ${isActive ? `${p.color} text-white ring-4 ring-white` : 'bg-white text-slate-400 hover:text-slate-600'}
+                        ${isActive ? `${p.color} text-white ring-4 ring-[var(--surface-primary)]` : 'bg-[var(--surface-primary)] text-slate-400 hover:text-slate-600'}
                       `}
                     >
                       {p.symbol || '1'}
                     </motion.button>
 
-                    <div className={`mt-3 text-[10px] font-black uppercase tracking-tighter ${isActive ? 'text-slate-800' : 'text-slate-400'}`}>
+                    <div className={`mt-3 text-[10px] font-black uppercase tracking-tighter ${isActive ? 'text-[var(--text-main)]' : 'text-slate-400'}`}>
                       {p.name}
                     </div>
                     <div className="text-[8px] font-bold text-slate-300 mt-1">

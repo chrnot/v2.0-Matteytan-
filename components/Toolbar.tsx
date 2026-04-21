@@ -47,10 +47,10 @@ export const Toolbar: React.FC<ToolbarProps> = memo(({
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2500] flex flex-col gap-3 items-center w-full px-4 animate-in slide-in-from-bottom-4 duration-300">
       {/* Drawing Toolbar */}
-      <div className="bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl p-2 lg:p-3 border-2 border-blue-500 flex items-center gap-2 sm:gap-3">
+      <div className="bg-[var(--surface-primary)]/95 backdrop-blur-md shadow-2xl rounded-2xl p-2 lg:p-3 border-2 border-blue-500 flex items-center gap-2 sm:gap-3 text-[var(--text-main)] transition-colors duration-300">
         
         {/* Color Selectors */}
-        <div className="flex gap-2 px-2 border-r border-slate-200">
+        <div className="flex gap-2 px-2 border-r border-[var(--sidebar-border)]">
           {COLORS.map(c => (
             <button
               key={c.hex}
@@ -63,10 +63,10 @@ export const Toolbar: React.FC<ToolbarProps> = memo(({
         </div>
 
         {/* Tools: Eraser & Width */}
-        <div className="flex items-center gap-2 sm:gap-4 px-1 border-r border-slate-200 pr-2 sm:pr-4">
+        <div className="flex items-center gap-2 sm:gap-4 px-1 border-r border-[var(--sidebar-border)] pr-2 sm:pr-4">
            <button 
               onClick={() => setIsEraser(!isEraser)}
-              className={`p-2 rounded-lg transition-colors ${isEraser ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}
+              className={`p-2 rounded-lg transition-colors ${isEraser ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:bg-[var(--sidebar-hover)]'}`}
               title="Suddgummi"
            >
               <Icons.Eraser size={24} />
@@ -77,14 +77,14 @@ export const Toolbar: React.FC<ToolbarProps> = memo(({
                 type="range" min="2" max="24" 
                 value={drawWidth}
                 onChange={(e) => setDrawWidth(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                className="w-full h-1.5 bg-[var(--brand-secondary)] rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
               <span className="text-[9px] font-black text-slate-400 uppercase text-center tracking-tighter">Bredd</span>
            </div>
 
            <button 
               onClick={onClearDrawings}
-              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
               title="Rensa allt"
            >
               <Icons.Trash size={24} />

@@ -10,19 +10,19 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-white/20">
-        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+      <div className="bg-[var(--surface-primary)] w-full max-w-2xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-[var(--sidebar-border)]">
+        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar text-[var(--text-main)]">
           <div className="flex justify-between items-start mb-6">
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 leading-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-main)] leading-tight">
               Om Matteytan – <span className="text-blue-600">Där abstrakt matematik blir konkret</span>
             </h2>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+            <button onClick={onClose} className="p-2 hover:bg-[var(--sidebar-hover)] rounded-full text-slate-400 transition-colors">
               <Icons.X size={24} />
             </button>
           </div>
           
-          <div className="space-y-6 text-slate-600 leading-relaxed">
-            <p className="text-lg font-medium text-slate-700">
+          <div className="space-y-6 opacity-80 leading-relaxed">
+            <p className="text-lg font-medium">
               Välkommen till Matteytan. Vi vet att matematiklärare ofta tvingas hoppa mellan olika flikar, fysiska plockmaterial och statiska presentationer för att få fram sin poäng. Matteytan är lösningen på det problemet – en samlad, digital startpunkt för dina lektioner.
             </p>
 
@@ -50,8 +50,8 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               </ul>
             </section>
 
-            <section className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2">För svenska klassrum</h3>
+            <section className="bg-[var(--brand-secondary)] p-6 rounded-2xl border border-[var(--sidebar-border)]">
+              <h3 className="text-sm font-black text-[var(--text-main)] uppercase tracking-widest mb-2 opacity-70">För svenska klassrum</h3>
               <p className="text-sm">Matteytan är utvecklad med den svenska läroplanen i åtanke. Från tallinjer och koordinatsystem till sannolikhetslära – allt är designat för att passa in direkt i din undervisning, oavsett om du undervisar på låg-, mellan- eller högstadiet.</p>
             </section>
 
@@ -60,10 +60,10 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             </p>
           </div>
         </div>
-        <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-center">
+        <div className="bg-[var(--brand-secondary)] p-4 border-t border-[var(--sidebar-border)] flex justify-center">
           <button 
             onClick={onClose}
-            className="px-8 py-3 bg-blue-600 text-white rounded-full font-black text-sm shadow-lg hover:bg-blue-700 transition-all"
+            className="px-8 py-3 bg-blue-600 text-white rounded-full font-black text-sm shadow-lg hover:bg-blue-700 transition-all shadow-blue-500/20 active:scale-95"
           >
             FÖRSTÅTT!
           </button>

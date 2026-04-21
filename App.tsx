@@ -42,9 +42,9 @@ const AboutModal = lazy(() => import('./components/AboutModal').then(m => ({ def
 const CodeOfConductModal = lazy(() => import('./components/CodeOfConductModal').then(m => ({ default: m.CodeOfConductModal })));
 
 const BACKGROUNDS: BackgroundConfig[] = [
-  { type: 'GRID', label: 'Rutnät', className: 'bg-grid-pattern' },
-  { type: 'DOTS', label: 'Prickar', className: 'bg-dot-pattern' },
-  { type: 'WHITE', label: 'Vit', className: 'bg-white' },
+  { type: 'GRID', label: 'Rutnät', className: 'bg-grid-pattern bg-[var(--surface-primary)]' },
+  { type: 'DOTS', label: 'Prickar', className: 'bg-dot-pattern bg-[var(--surface-primary)]' },
+  { type: 'WHITE', label: 'Vit', className: 'bg-[var(--surface-primary)]' },
   { type: 'BLACK', label: 'Svart', className: 'bg-slate-900' },
 ];
 
@@ -307,6 +307,20 @@ const App: React.FC = () => {
 
   const [transparentWidgets, setTransparentWidgets] = useState<Record<string, boolean>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('matteytan-theme');
+    return saved ? saved === 'dark' : false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('matteytan-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('matteytan-theme', 'light');
+    }
+  }, [isDarkMode]);
 
   const addWidget = useCallback((type: WidgetType) => {
     const sw = window.innerWidth;
@@ -449,7 +463,8 @@ const App: React.FC = () => {
         onAddWidget={addWidget} 
         widgetMetadata={WIDGET_CONFIG} 
         onPiClick={() => setIsPiCodeOpen(true)}
-        darkMode={background === 'BLACK'}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
       />
 
       {/* Top Controls Bar */}

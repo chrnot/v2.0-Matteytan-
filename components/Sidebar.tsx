@@ -17,7 +17,8 @@ interface SidebarProps {
     klagSupport?: boolean;
   }>;
   onPiClick?: () => void;
-  darkMode?: boolean;
+  isDarkMode: boolean;
+  onToggleDarkMode: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -26,7 +27,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onAddWidget, 
   widgetMetadata, 
   onPiClick, 
-  darkMode 
+  isDarkMode,
+  onToggleDarkMode
 }) => {
   const [activeArea, setActiveArea] = useState<MathArea | null>(null);
 
@@ -60,18 +62,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <motion.div 
         initial={false}
         animate={{ width: isOpen ? 280 : 80 }}
-        className="bg-white/95 backdrop-blur-xl border-r border-slate-200 h-full flex flex-col shadow-2xl overflow-hidden"
+        className="bg-[var(--sidebar-bg)] backdrop-blur-xl border-r border-[var(--sidebar-border)] h-full flex flex-col shadow-2xl overflow-hidden transition-colors duration-300"
       >
         {/* Toggle / Header */}
-        <div className="p-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+        <div className="p-4 flex items-center justify-between border-b border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/30">
           <div className="flex-1 overflow-hidden transition-all duration-300" style={{ opacity: isOpen ? 1 : 0, width: isOpen ? 'auto' : 0 }}>
-             <Logo darkMode={darkMode} onPiClick={onPiClick} isSidebar />
+             <Logo darkMode={isDarkMode} onPiClick={onPiClick} isSidebar />
           </div>
           <button 
             onClick={() => onOpenChange(!isOpen)}
-            className="p-2 hover:bg-slate-200 rounded-xl text-slate-500 transition-colors ml-2"
+            className="p-2 hover:bg-[var(--sidebar-hover)] rounded-xl text-slate-500 transition-colors ml-2"
           >
-            <Icons.Menu size={24} />
+            <Icons.Menu size={24} className={isDarkMode ? 'text-slate-400' : 'text-slate-500'} />
           </button>
         </div>
 
@@ -81,10 +83,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={area.id}
               onClick={() => setActiveArea(activeArea === area.id ? null : area.id)}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all group ${activeArea === area.id ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-100 text-slate-700'}`}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all group ${
+                activeArea === area.id 
+                  ? 'bg-blue-600 text-white shadow-lg' 
+                  : `hover:bg-[var(--sidebar-hover)] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`
+              }`}
               title={area.label}
             >
-              <div className={`p-2 rounded-lg ${activeArea === area.id ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-white transition-colors'}`}>
+              <div className={`p-2 rounded-lg ${
+                activeArea === area.id 
+                  ? 'bg-white/20' 
+                  : isDarkMode ? 'bg-slate-800 group-hover:bg-slate-700' : 'bg-slate-100 group-hover:bg-white'
+              } transition-colors`}>
                 <area.icon size={20} />
               </div>
               {isOpen && (
@@ -100,7 +110,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </div>
 
-        {/* Footer info/about could go here */}
+        {/* Footer Settings / Mattelab / Dark Mode toggle */}
+        <div className="p-4 border-t border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/30 mt-auto flex flex-col gap-4">
+          <a
+            href="/mattelab"
+            className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
+              isDarkMode 
+                ? 'hover:bg-slate-800 text-slate-300' 
+                : 'hover:bg-white text-slate-700 bg-white/50 border border-slate-200'
+            }`}
+            title="Gå till Mattelab"
+          >
+            <div className={`p-2 rounded-lg transition-colors ${
+              isDarkMode ? 'bg-indigo-900/30 text-indigo-400 group-hover:bg-indigo-900/50' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200'
+            }`}>
+              <Icons.Lab size={20} />
+            </div>
+            {isOpen && (
+              <div className="flex-1 text-left">
+                <div className="text-xs font-black uppercase tracking-widest leading-none mb-0.5">Mattelab</div>
+                <div className="text-[9px] text-slate-400 line-clamp-1">Laborativ miljö</div>
+              </div>
+            )}
+            {isOpen && <Icons.ArrowRight size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />}
+          </a>
+
+          <div className={`flex items-center gap-3 ${isOpen ? 'justify-between pb-2' : 'justify-center pb-2'}`}>
+            {isOpen && (
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Ljust / Mörkt
+              </span>
+            )}
+            <button 
+              onClick={onToggleDarkMode}
+              className={`p-2 rounded-xl transition-all shadow-sm ${
+                isDarkMode 
+                  ? 'bg-slate-800 text-amber-400 hover:bg-slate-700' 
+                  : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
+              }`}
+              title={isDarkMode ? 'Växla till ljust läge' : 'Växla till mörkt läge'}
+            >
+              {isDarkMode ? <Icons.Moon size={20} /> : <Icons.Sun size={20} />}
+            </button>
+          </div>
+        </div>
       </motion.div>
 
       {/* Floating Submenu - Widgets in Area */}
@@ -110,9 +163,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="ml-2 mt-4 w-72 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/50 h-fit max-h-[85vh] overflow-hidden flex flex-col"
+            className="ml-2 mt-4 w-72 bg-[var(--sidebar-bg)] backdrop-blur-2xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-[var(--sidebar-border)] h-fit max-h-[85vh] overflow-hidden flex flex-col transition-colors duration-300"
           >
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="p-4 border-b border-[var(--sidebar-border)] flex items-center justify-between bg-[var(--sidebar-hover)]/30">
               <div className="flex items-center gap-2">
                 <div className="text-blue-600">
                   {(() => {
@@ -120,11 +173,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     return area ? <area.icon size={18} /> : null;
                   })()}
                 </div>
-                <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">
+                <h3 className={`font-black uppercase tracking-widest text-xs ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   {MATH_AREAS.find(a => a.id === activeArea)?.label}
                 </h3>
               </div>
-              <button onClick={() => setActiveArea(null)} className="p-1 hover:bg-slate-200 rounded text-slate-400">
+              <button 
+                onClick={() => setActiveArea(null)} 
+                className={`p-1 hover:bg-[var(--sidebar-hover)] rounded ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              >
                 <Icons.X size={14} />
               </button>
             </div>
@@ -133,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {Object.entries(getWidgetsInArea(activeArea)).map(([sub, items]) => (
                 <div key={sub} className="space-y-1">
                   {sub !== 'Övrigt' && (
-                    <div className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-blue-500 ml-1 mb-2">
+                    <div className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest border-l-2 border-blue-500 ml-1 mb-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                       {sub}
                     </div>
                   )}
@@ -145,16 +201,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         onOpenChange(false);
                         setActiveArea(null);
                       }}
-                      className="w-full p-3 flex items-center justify-between rounded-xl hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-all border border-transparent hover:border-blue-100 group"
+                      className={`w-full p-3 flex items-center justify-between rounded-xl transition-all border border-transparent group ${
+                        isDarkMode 
+                          ? 'hover:bg-slate-800 text-slate-300 hover:text-white hover:border-slate-700' 
+                          : 'hover:bg-blue-50 text-slate-700 hover:text-blue-700 hover:border-blue-100'
+                      }`}
                     >
                       <div className="text-left">
                         <div className="text-sm font-bold leading-none mb-1">{meta.title}</div>
                         <div className="flex items-center gap-1.5">
                           <span className={`text-[8px] uppercase font-black px-1.5 py-0.5 rounded ${
-                            meta.difficulty === Difficulty.LABORATIVE ? 'bg-emerald-100 text-emerald-700' :
-                            meta.difficulty === Difficulty.CONCRETIZING ? 'bg-blue-100 text-blue-700' :
-                            meta.difficulty === Difficulty.ABSTRACTING ? 'bg-amber-100 text-amber-700' :
-                            'bg-rose-100 text-rose-700'
+                            meta.difficulty === Difficulty.LABORATIVE ? (isDarkMode ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-100 text-emerald-700') :
+                            meta.difficulty === Difficulty.CONCRETIZING ? (isDarkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700') :
+                            meta.difficulty === Difficulty.ABSTRACTING ? (isDarkMode ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-100 text-amber-700') :
+                            (isDarkMode ? 'bg-rose-900/30 text-rose-400' : 'bg-rose-100 text-rose-700')
                           }`}>
                             {meta.difficulty === Difficulty.LABORATIVE ? 'Laborativ' :
                              meta.difficulty === Difficulty.CONCRETIZING ? 'Konkretiserande' :
@@ -162,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                              'Formell'}
                           </span>
                           {meta.klagSupport && (
-                            <span className="text-[8px] uppercase font-black px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">KLAG</span>
+                            <span className={`text-[8px] uppercase font-black px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>KLAG</span>
                           )}
                         </div>
                       </div>
