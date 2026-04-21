@@ -6,6 +6,8 @@ import { Icons } from './icons';
 import { Logo } from './Logo';
 
 interface SidebarProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   onAddWidget: (type: WidgetType) => void;
   widgetMetadata: Record<WidgetType, { 
     category: MathArea[]; 
@@ -18,8 +20,14 @@ interface SidebarProps {
   darkMode?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onAddWidget, widgetMetadata, onPiClick, darkMode }) => {
-  const [isOpen, setIsOpen] = useState(true);
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  isOpen, 
+  onOpenChange, 
+  onAddWidget, 
+  widgetMetadata, 
+  onPiClick, 
+  darkMode 
+}) => {
   const [activeArea, setActiveArea] = useState<MathArea | null>(null);
 
   const getWidgetsInArea = (area: MathArea) => {
@@ -60,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddWidget, widgetMetadata, o
              <Logo darkMode={darkMode} onPiClick={onPiClick} isSidebar />
           </div>
           <button 
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => onOpenChange(!isOpen)}
             className="p-2 hover:bg-slate-200 rounded-xl text-slate-500 transition-colors ml-2"
           >
             <Icons.Menu size={24} />
@@ -134,6 +142,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddWidget, widgetMetadata, o
                       key={type}
                       onClick={() => {
                         onAddWidget(type as WidgetType);
+                        onOpenChange(false);
+                        setActiveArea(null);
                       }}
                       className="w-full p-3 flex items-center justify-between rounded-xl hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-all border border-transparent hover:border-blue-100 group"
                     >

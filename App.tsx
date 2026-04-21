@@ -306,6 +306,7 @@ const App: React.FC = () => {
   const drawingCanvasRef = useRef<DrawingCanvasHandle>(null);
 
   const [transparentWidgets, setTransparentWidgets] = useState<Record<string, boolean>>({});
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const addWidget = useCallback((type: WidgetType) => {
     const sw = window.innerWidth;
@@ -333,6 +334,7 @@ const App: React.FC = () => {
         return newZ;
     });
     setIsToolsOpen(false);
+    setIsSidebarOpen(false);
   }, []);
 
   const removeWidget = useCallback((id: string) => {
@@ -442,6 +444,8 @@ const App: React.FC = () => {
     <div className={`w-full h-full relative overflow-hidden transition-colors duration-500 ${getBackgroundClass()}`}>
       
       <Sidebar 
+        isOpen={isSidebarOpen}
+        onOpenChange={setIsSidebarOpen}
         onAddWidget={addWidget} 
         widgetMetadata={WIDGET_CONFIG} 
         onPiClick={() => setIsPiCodeOpen(true)}
