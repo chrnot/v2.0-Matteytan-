@@ -135,6 +135,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isOpen && <Icons.ArrowRight size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />}
           </a>
 
+          <a
+            href="https://gemini.google.com/gem/1IJSJChUR2EHRw5PTn_-pvF_hJdPs2PRS?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
+              isDarkMode 
+                ? 'hover:bg-slate-800 text-slate-300' 
+                : 'hover:bg-white text-slate-700 bg-white/50 border border-slate-200'
+            }`}
+            title="Gå till Concept Cartoons"
+          >
+            <div className={`p-2 rounded-lg transition-colors ${
+              isDarkMode ? 'bg-amber-900/30 text-amber-400 group-hover:bg-amber-900/50' : 'bg-amber-100 text-amber-600 group-hover:bg-amber-200'
+            }`}>
+              <Icons.Feedback size={20} />
+            </div>
+            {isOpen && (
+              <div className="flex-1 text-left">
+                <div className="text-xs font-black uppercase tracking-widest leading-none mb-0.5">Concept Cartoons</div>
+                <div className="text-[9px] text-slate-400 line-clamp-1">Diskutera matematik</div>
+              </div>
+            )}
+            {isOpen && <Icons.Maximize size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-y-1 group-hover:translate-y-0" />}
+          </a>
+
           <div className={`flex items-center gap-3 ${isOpen ? 'justify-between pb-2' : 'justify-center pb-2'}`}>
             {isOpen && (
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
