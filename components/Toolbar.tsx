@@ -18,6 +18,12 @@ interface ToolbarProps {
   isEraser: boolean;
   setIsEraser: (v: boolean) => void;
   onClearDrawings: () => void;
+
+  // Shapes
+  drawTool: 'PENCIL' | 'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'TRIANGLE';
+  setDrawTool: (t: 'PENCIL' | 'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'TRIANGLE') => void;
+  drawFilled: boolean;
+  setDrawFilled: (v: boolean) => void;
 }
 
 const COLORS = [
@@ -40,7 +46,11 @@ export const Toolbar: React.FC<ToolbarProps> = memo(({
   setDrawWidth,
   isEraser,
   setIsEraser,
-  onClearDrawings
+  onClearDrawings,
+  drawTool,
+  setDrawTool,
+  drawFilled,
+  setDrawFilled
 }) => {
   if (!isDrawingMode) return null;
 
@@ -60,6 +70,59 @@ export const Toolbar: React.FC<ToolbarProps> = memo(({
               title={c.label}
             />
           ))}
+        </div>
+
+        {/* Shape Selectors */}
+        <div className="flex items-center gap-1 sm:gap-1.5 px-2 border-r border-[var(--sidebar-border)]">
+          <button
+            onClick={() => { setDrawTool('PENCIL'); setIsEraser(false); }}
+            className={`p-1.5 sm:p-2 rounded-lg transition-all ${drawTool === 'PENCIL' && !isEraser ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110' : 'text-slate-400 hover:bg-[var(--sidebar-hover)]'}`}
+            title="Frihandspenna"
+          >
+            <Icons.Pencil size={20} />
+          </button>
+          
+          <button
+            onClick={() => { setDrawTool('SQUARE'); setIsEraser(false); }}
+            className={`p-1.5 sm:p-2 rounded-lg transition-all ${drawTool === 'SQUARE' && !isEraser ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110' : 'text-slate-400 hover:bg-[var(--sidebar-hover)]'}`}
+            title="Kvadrat"
+          >
+            <div className={`w-4 h-4 border-2 ${drawTool === 'SQUARE' && !isEraser ? 'border-blue-600 dark:border-blue-400' : 'border-slate-400'} rounded-sm`}></div>
+          </button>
+
+          <button
+            onClick={() => { setDrawTool('RECTANGLE'); setIsEraser(false); }}
+            className={`p-1.5 sm:p-2 rounded-lg transition-all ${drawTool === 'RECTANGLE' && !isEraser ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110' : 'text-slate-400 hover:bg-[var(--sidebar-hover)]'}`}
+            title="Rektangel"
+          >
+            <div className={`w-5 h-3.5 border-2 ${drawTool === 'RECTANGLE' && !isEraser ? 'border-blue-600 dark:border-blue-400' : 'border-slate-400'} rounded-sm`}></div>
+          </button>
+
+          <button
+            onClick={() => { setDrawTool('CIRCLE'); setIsEraser(false); }}
+            className={`p-1.5 sm:p-2 rounded-lg transition-all ${drawTool === 'CIRCLE' && !isEraser ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110' : 'text-slate-400 hover:bg-[var(--sidebar-hover)]'}`}
+            title="Cirkel"
+          >
+            <div className={`w-4 h-4 border-2 ${drawTool === 'CIRCLE' && !isEraser ? 'border-blue-600 dark:border-blue-400' : 'border-slate-400'} rounded-full`}></div>
+          </button>
+
+          <button
+            onClick={() => { setDrawTool('TRIANGLE'); setIsEraser(false); }}
+            className={`p-1.5 sm:p-2 rounded-lg transition-all ${drawTool === 'TRIANGLE' && !isEraser ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 scale-110' : 'text-slate-400 hover:bg-[var(--sidebar-hover)]'}`}
+            title="Triangel"
+          >
+            <div className={`w-0 h-0 border-l-[7px] border-r-[7px] border-b-[13px] border-l-transparent border-r-transparent ${drawTool === 'TRIANGLE' && !isEraser ? 'border-b-blue-600 dark:border-b-blue-400' : 'border-b-slate-400'}`}></div>
+          </button>
+
+          {drawTool !== 'PENCIL' && (
+            <button
+              onClick={() => setDrawFilled(!drawFilled)}
+              className={`ml-1 px-1.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all border ${drawFilled ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm font-bold' : 'bg-transparent border-slate-300 dark:border-slate-700 text-slate-500 hover:text-slate-700'}`}
+              title={drawFilled ? "Fylld form" : "Kontur"}
+            >
+              {drawFilled ? "Fylld" : "Kontur"}
+            </button>
+          )}
         </div>
 
         {/* Tools: Eraser & Width */}

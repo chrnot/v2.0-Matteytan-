@@ -35,7 +35,11 @@ const MultiMatchWidget = lazy(() => import('./components/widgets/MultiMatchWidge
 const TieredTaskWidget = lazy(() => import('./components/widgets/TieredTaskWidget').then(m => ({ default: m.TieredTaskWidget })));
 const PrefixConverterWidget = lazy(() => import('./components/widgets/PrefixConverterWidget').then(m => ({ default: m.PrefixConverterWidget })));
 const PositionsMachineWidget = lazy(() => import('./components/widgets/PositionsMachineWidget').then(m => ({ default: m.PositionsMachineWidget })));
+const UnitStaircaseWidget = lazy(() => import('./components/widgets/UnitStaircaseWidget').then(m => ({ default: m.UnitStaircaseWidget })));
+const BasicStatisticianWidget = lazy(() => import('./components/widgets/BasicStatisticianWidget').then(m => ({ default: m.BasicStatisticianWidget })));
+const CentikubBoxWidget = lazy(() => import('./components/widgets/CentikubBoxWidget').then(m => ({ default: m.CentikubBoxWidget })));
 const PiCodeWidget = lazy(() => import('./components/widgets/PiCodeWidget').then(m => ({ default: m.PiCodeWidget })));
+const SortingBoxWidget = lazy(() => import('./components/widgets/SortingBoxWidget').then(m => ({ default: m.SortingBoxWidget })));
 
 // Lazy load modals
 const AboutModal = lazy(() => import('./components/AboutModal').then(m => ({ default: m.AboutModal })));
@@ -130,7 +134,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
     title: 'Formler', 
     component: FormulaWidget, 
     size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 600, sw * 0.95), h: clamp(m ? 700 : 650, sh * 0.85) }),
-    category: [MathArea.ALGEBRA, MathArea.SAMBAND],
+    category: [],
     difficulty: Difficulty.FORMAL,
   },
   [WidgetType.CALCULATOR]: { 
@@ -200,7 +204,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
     title: 'Matte-verkstad', 
     component: MathWorkshopWidget, 
     size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 850, sw * 0.95), h: clamp(m ? 650 : 600, sh * 0.85) }),
-    category: [MathArea.PROBLEMLÖSNING],
+    category: [],
     difficulty: Difficulty.LABORATIVE,
     klagSupport: true,
   },
@@ -266,6 +270,21 @@ const WIDGET_CONFIG: Record<WidgetType, {
     subCategory: MathSubArea.POSITIONS,
     difficulty: Difficulty.CONCRETIZING,
   },
+  [WidgetType.UNIT_STAIRCASE]: { 
+    title: 'Enhetstrappan', 
+    component: UnitStaircaseWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 700 : 750, sh * 0.85) }),
+    category: [MathArea.TAL, MathArea.GEOMETRI, MathArea.SAMBAND],
+    subCategory: MathSubArea.RELATIONS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.BASIC_STATISTICIAN]: { 
+    title: 'Bas-Statistikern', 
+    component: BasicStatisticianWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 700, sw * 0.95), h: clamp(m ? 700 : 700, sh * 0.85) }),
+    category: [MathArea.STATISTIK],
+    difficulty: Difficulty.CONCRETIZING,
+  },
   [WidgetType.MAGIC_SQUARE]: { 
     title: 'Magiska Kvadraten', 
     component: MagicSquareWidget, 
@@ -281,6 +300,21 @@ const WIDGET_CONFIG: Record<WidgetType, {
     category: [MathArea.ALGEBRA],
     difficulty: Difficulty.LABORATIVE,
   },
+  [WidgetType.CENTIKUB_BOX]: { 
+    title: 'Centikub-Lådan', 
+    component: CentikubBoxWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 800, sw * 0.95), h: clamp(m ? 720 : 700, sh * 0.85) }),
+    category: [MathArea.TAL, MathArea.GEOMETRI],
+    subCategory: MathSubArea.PATTERNS,
+    difficulty: Difficulty.LABORATIVE,
+  },
+  [WidgetType.SORTING_BOX]: { 
+    title: 'Sorteringsboxen', 
+    component: SortingBoxWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 750 : 720, sh * 0.85) }),
+    category: [MathArea.TAL, MathArea.GEOMETRI],
+    difficulty: Difficulty.LABORATIVE,
+  },
 };
 
 const EXTRA_TOOLS = [
@@ -288,6 +322,8 @@ const EXTRA_TOOLS = [
   { type: WidgetType.RULER, icon: Icons.Ruler, label: 'Linjal' },
   { type: WidgetType.PROTRACTOR, icon: Icons.Rotate, label: 'Gradskiva' },
   { type: WidgetType.CALCULATOR, icon: Icons.Math, label: 'Räknare' },
+  { type: WidgetType.FORMULAS, icon: Icons.Book, label: 'Formler' },
+  { type: WidgetType.MATH_WORKSHOP, icon: Icons.Lightbulb, label: 'Matte-verkstad' },
 ];
 
 const App: React.FC = () => {
@@ -303,6 +339,8 @@ const App: React.FC = () => {
   const [drawColor, setDrawColor] = useState('#ef4444'); 
   const [drawWidth, setDrawWidth] = useState(4);
   const [isEraser, setIsEraser] = useState(false);
+  const [drawTool, setDrawTool] = useState<'PENCIL' | 'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'TRIANGLE'>('PENCIL');
+  const [drawFilled, setDrawFilled] = useState(false);
   const drawingCanvasRef = useRef<DrawingCanvasHandle>(null);
 
   const [transparentWidgets, setTransparentWidgets] = useState<Record<string, boolean>>({});
@@ -537,6 +575,8 @@ const App: React.FC = () => {
         lineWidth={drawWidth}
         isEraser={isEraser}
         zIndex={10}
+        drawTool={drawTool}
+        drawFilled={drawFilled}
       />
 
       {widgets.map(widget => {
@@ -649,6 +689,10 @@ const App: React.FC = () => {
         isEraser={isEraser}
         setIsEraser={setIsEraser}
         onClearDrawings={clearDrawings}
+        drawTool={drawTool}
+        setDrawTool={setDrawTool}
+        drawFilled={drawFilled}
+        setDrawFilled={setDrawFilled}
       />
     </div>
   );

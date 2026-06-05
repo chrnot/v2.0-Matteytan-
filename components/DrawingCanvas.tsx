@@ -10,6 +10,8 @@ interface DrawingCanvasProps {
   lineWidth: number;
   isEraser: boolean;
   zIndex: number;
+  drawTool: 'PENCIL' | 'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'TRIANGLE';
+  drawFilled: boolean;
 }
 
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(({ 
@@ -17,11 +19,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   color, 
   lineWidth, 
   isEraser,
-  zIndex 
+  zIndex,
+  drawTool,
+  drawFilled
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const [isPressed, setIsPressed] = useState(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const savedImageDataRef = useRef<ImageData | null>(null);
 
   // Expose clear method to parent
   useImperativeHandle(ref, () => ({
@@ -70,8 +77,20 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const startDrawing = (x: number, y: number) => {
     if (!isDrawingMode || !contextRef.current) return;
     
-    contextRef.current.beginPath();
-    contextRef.current.moveTo(x, y);
+    const currentTool = isEraser ? 'ERASER' : drawTool;
+    
+    if (currentTool === 'ERASER' || currentTool === 'PENCIL') {
+      contextRef.current.beginPath();
+      contextRef.current.moveTo(x, y);
+    } else {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        savedImageDataRef.current = contextRef.current.getImageData(0, 0, canvas.width, canvas.height);
+      }
+      startXRef.current = x;
+      startYRef.current = y;
+    }
+    
     setIsPressed(true);
   };
 
@@ -79,18 +98,93 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     if (!isPressed || !isDrawingMode || !contextRef.current) return;
 
     const ctx = contextRef.current;
-    ctx.strokeStyle = isEraser ? 'rgba(0,0,0,1)' : color; // Eraser uses destination-out or white. Best is destination-out.
-    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
-    ctx.lineWidth = lineWidth;
-    
-    ctx.lineTo(x, y);
-    ctx.stroke();
+    const currentTool = isEraser ? 'ERASER' : drawTool;
+
+    if (currentTool === 'ERASER' || currentTool === 'PENCIL') {
+      ctx.strokeStyle = isEraser ? 'rgba(0,0,0,1)' : color; // Eraser uses destination-out or white. Best is destination-out.
+      ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+      ctx.lineWidth = lineWidth;
+      
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    } else {
+      const canvas = canvasRef.current;
+      if (!canvas || !savedImageDataRef.current) return;
+
+      // Restore the canvas to the state before this drag gesture started
+      ctx.putImageData(savedImageDataRef.current, 0, 0);
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const startX = startXRef.current;
+      const startY = startYRef.current;
+
+      ctx.beginPath();
+
+      if (currentTool === 'SQUARE') {
+        const size = Math.max(Math.abs(x - startX), Math.abs(y - startY));
+        const rectX = x < startX ? startX - size : startX;
+        const rectY = y < startY ? startY - size : startY;
+
+        if (drawFilled) {
+          ctx.fillRect(rectX, rectY, size, size);
+        } else {
+          ctx.rect(rectX, rectY, size, size);
+          ctx.stroke();
+        }
+      } else if (currentTool === 'RECTANGLE') {
+        const rectX = Math.min(startX, x);
+        const rectY = Math.min(startY, y);
+        const w = Math.abs(x - startX);
+        const h = Math.abs(y - startY);
+
+        if (drawFilled) {
+          ctx.fillRect(rectX, rectY, w, h);
+        } else {
+          ctx.rect(rectX, rectY, w, h);
+          ctx.stroke();
+        }
+      } else if (currentTool === 'CIRCLE') {
+        const dx = x - startX;
+        const dy = y - startY;
+        const r = Math.sqrt(dx * dx + dy * dy);
+
+        ctx.arc(startX, startY, r, 0, 2 * Math.PI);
+        if (drawFilled) {
+          ctx.fill();
+        } else {
+          ctx.stroke();
+        }
+      } else if (currentTool === 'TRIANGLE') {
+        const minX = Math.min(startX, x);
+        const maxX = Math.max(startX, x);
+        const minY = Math.min(startY, y);
+        const maxY = Math.max(startY, y);
+
+        ctx.moveTo((minX + maxX) / 2, minY);
+        ctx.lineTo(minX, maxY);
+        ctx.lineTo(maxX, maxY);
+        ctx.closePath();
+
+        if (drawFilled) {
+          ctx.fill();
+        } else {
+          ctx.stroke();
+        }
+      }
+    }
   };
 
   const endDrawing = () => {
     if (!contextRef.current) return;
     contextRef.current.closePath();
     setIsPressed(false);
+    savedImageDataRef.current = null;
   };
 
   // Event Handlers
