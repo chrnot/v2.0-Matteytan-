@@ -115,7 +115,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Footer Settings / Mattelab / Dark Mode toggle */}
         <div className="p-4 border-t border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/30 mt-auto flex flex-col gap-4">
           <a
-            href="/mattelab"
+            href="https://matteytan.se/mattelab"
+            target="_blank"
+            rel="noopener noreferrer"
             className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
               isDarkMode 
                 ? 'hover:bg-slate-800 text-slate-300' 
