@@ -19,6 +19,7 @@ interface SidebarProps {
   onPiClick?: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
+  onOpenSearch: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -28,7 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   widgetMetadata, 
   onPiClick, 
   isDarkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
+  onOpenSearch
 }) => {
   const [activeArea, setActiveArea] = useState<MathArea | null>(null);
 
@@ -166,17 +168,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Ljust / Mörkt
               </span>
             )}
-            <button 
-              onClick={onToggleDarkMode}
-              className={`p-2 rounded-xl transition-all shadow-sm ${
-                isDarkMode 
-                  ? 'bg-slate-800 text-amber-400 hover:bg-slate-700' 
-                  : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
-              }`}
-              title={isDarkMode ? 'Växla till ljust läge' : 'Växla till mörkt läge'}
-            >
-              {isDarkMode ? <Icons.Moon size={20} /> : <Icons.Sun size={20} />}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={onOpenSearch}
+                className={`p-2 rounded-xl transition-all shadow-sm ${
+                  isDarkMode 
+                    ? 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700' 
+                    : 'bg-white text-slate-500 hover:text-blue-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+                title="Sök verktyg"
+              >
+                <Icons.Search size={20} />
+              </button>
+              <button 
+                onClick={onToggleDarkMode}
+                className={`p-2 rounded-xl transition-all shadow-sm ${
+                  isDarkMode 
+                    ? 'bg-slate-800 text-amber-400 hover:bg-slate-700' 
+                    : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
+                }`}
+                title={isDarkMode ? 'Växla till ljust läge' : 'Växla till mörkt läge'}
+              >
+                {isDarkMode ? <Icons.Moon size={20} /> : <Icons.Sun size={20} />}
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>

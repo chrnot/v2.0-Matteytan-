@@ -110,10 +110,10 @@ export const CentikubBoxWidget: React.FC<CentikubBoxWidgetProps> = () => {
     0
   );
 
-  // 3D Isometric Viewport Constants - larger scale for smaller grid sizes
-  const scale = gridSize === 6 ? 34 : gridSize === 8 ? 27 : 22;
+  // 3D Isometric Viewport Constants - scaled up significantly to make cubes and surface look bigger and easier to tap!
+  const scale = gridSize === 6 ? 58 : gridSize === 8 ? 46 : 37;
   const centerX = 400;
-  const centerY = gridSize === 6 ? 160 : gridSize === 8 ? 180 : 190;
+  const centerY = gridSize === 6 ? 195 : gridSize === 8 ? 225 : 250;
   const dx = scale * 1.0;
   const dy = scale * 0.52;
   const cubeHeight = Math.round(scale * 0.86);
@@ -131,6 +131,10 @@ export const CentikubBoxWidget: React.FC<CentikubBoxWidgetProps> = () => {
   // Modify individual column values
   const handleCellClick = (col: number, row: number, e: React.MouseEvent) => {
     if (col >= gridSize || row >= gridSize) return;
+    
+    // Stop propagation to prevent touch bubble loops
+    e.stopPropagation();
+    
     // If user shifts-clicks, act as eraser
     const activeTool = e.shiftKey ? 'ERASER' : tool;
     const newGrid = grid.map((cCols) => cCols.map((stack) => [...stack]));
@@ -551,23 +555,25 @@ export const CentikubBoxWidget: React.FC<CentikubBoxWidgetProps> = () => {
             </div>
           ) : (
             /* RENDER VIEW: 3D Isometric Projection */
-            <div className="w-full h-full flex items-center justify-center min-h-[380px] relative overflow-hidden animate-in fade-in duration-300">
+            <div className="w-full h-full flex items-center justify-center min-h-[440px] relative overflow-hidden animate-in fade-in duration-300">
               
-              {/* Reset view reminder */}
-              {totalCubes === 0 && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-4 z-10 bg-slate-100/10">
-                  <span className="text-3xl filter saturate-150 animate-bounce">📦</span>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-2 leading-relaxed">
-                    Centikub-lådan är tom.<br/>Klicka på rutnätet för att bygga!
-                  </p>
-                </div>
-              )}
-
               <svg
-                viewBox="0 0 800 500"
+                viewBox="0 0 800 620"
                 className="w-full h-full cursor-pointer overflow-visible drop-shadow-sm select-none"
-                onClick={() => {}}
               >
+                {/* Native SVG empty placeholder group - cannot catch/block clicks because child text/shape has pointer-events-none */}
+                {totalCubes === 0 && (
+                  <g className="pointer-events-none select-none">
+                    <text x={400} y={centerY + 50} textAnchor="middle" fontSize={42} className="opacity-80">📦</text>
+                    <text x={400} y={centerY + 95} textAnchor="middle" fontSize={14} fontWeight="900" className="fill-slate-400 dark:fill-slate-500 uppercase tracking-widest">
+                      Centikub-lådan är tom
+                    </text>
+                    <text x={400} y={centerY + 115} textAnchor="middle" fontSize={11} fontWeight="700" className="fill-slate-400 dark:fill-slate-500 uppercase tracking-wider">
+                      Klicka på rutnätet för att bygga!
+                    </text>
+                  </g>
+                )}
+
                 {/* 1. Base grid rendering (Painter's algorithm back-to-front rendering col-by-col, row-by-row) */}
                 {Array.from({ length: gridSize }).map((_, r) =>
                   Array.from({ length: gridSize }).map((_, c) => {
@@ -584,7 +590,7 @@ export const CentikubBoxWidget: React.FC<CentikubBoxWidgetProps> = () => {
 
                     return (
                       <g key={`tile-${c}-${r}`}>
-                        {/* Floor polygon */}
+                        {/* Floor polygon - uses standard onClick for reliable multi-platform input */}
                         <polygon
                           points={pointsStr}
                           onClick={(e) => handleCellClick(c, r, e)}
@@ -592,6 +598,7 @@ export const CentikubBoxWidget: React.FC<CentikubBoxWidgetProps> = () => {
                           strokeWidth={0.8}
                           style={{
                             fillOpacity: 0.82,
+                            pointerEvents: 'auto',
                           }}
                           // Use a theme responsive light border stroke
                           className={`transition-colors duration-200 fill-white dark:fill-slate-900 border stroke-slate-200 dark:stroke-slate-800 cursor-pointer ${

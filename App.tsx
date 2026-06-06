@@ -54,6 +54,7 @@ const BACKGROUNDS: BackgroundConfig[] = [
 
 import { MathArea, Difficulty, WidgetMetadata, MathSubArea } from './types';
 import { Sidebar } from './components/Sidebar';
+import { SearchModal } from './components/SearchModal';
 
 const clamp = (val: number, max: number) => Math.min(val, max);
 
@@ -235,7 +236,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
     title: 'Plånboken', 
     component: EconomyWidget, 
     size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 750, sw * 0.95), h: clamp(m ? 800 : 650, sh * 0.85) }),
-    category: [MathArea.TAL, MathArea.SAMBAND],
+    category: [MathArea.SAMBAND],
     subCategory: MathSubArea.OPERATIONS,
     difficulty: Difficulty.CONCRETIZING,
   },
@@ -258,7 +259,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
     title: 'Prefix-Växlaren', 
     component: PrefixConverterWidget, 
     size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 600 : 700, sh * 0.85) }),
-    category: [MathArea.SAMBAND, MathArea.TAL],
+    category: [MathArea.SAMBAND],
     subCategory: MathSubArea.OPERATIONS,
     difficulty: Difficulty.CONCRETIZING,
   },
@@ -303,7 +304,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
   [WidgetType.CENTIKUB_BOX]: { 
     title: 'Centikub-Lådan', 
     component: CentikubBoxWidget, 
-    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 800, sw * 0.95), h: clamp(m ? 720 : 700, sh * 0.85) }),
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 980, sw * 0.95), h: clamp(m ? 720 : 820, sh * 0.90) }),
     category: [MathArea.TAL, MathArea.GEOMETRI],
     subCategory: MathSubArea.PATTERNS,
     difficulty: Difficulty.LABORATIVE,
@@ -311,7 +312,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
   [WidgetType.SORTING_BOX]: { 
     title: 'Sorteringsboxen', 
     component: SortingBoxWidget, 
-    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 1000, sw * 0.95), h: clamp(m ? 750 : 720, sh * 0.85) }),
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 1080, sw * 0.95), h: clamp(m ? 750 : 800, sh * 0.88) }),
     category: [MathArea.TAL, MathArea.GEOMETRI],
     difficulty: Difficulty.LABORATIVE,
   },
@@ -345,6 +346,7 @@ const App: React.FC = () => {
 
   const [transparentWidgets, setTransparentWidgets] = useState<Record<string, boolean>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('matteytan-theme');
     return saved ? saved === 'dark' : false;
@@ -359,6 +361,17 @@ const App: React.FC = () => {
       localStorage.setItem('matteytan-theme', 'light');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const addWidget = useCallback((type: WidgetType) => {
     const sw = window.innerWidth;
@@ -503,6 +516,7 @@ const App: React.FC = () => {
         onPiClick={() => setIsPiCodeOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
+        onOpenSearch={() => setIsSearchOpen(true)}
       />
 
       {/* Top Controls Bar */}
@@ -608,6 +622,13 @@ const App: React.FC = () => {
           </WidgetWrapper>
         );
       })}
+
+      {/* Search Modal */}
+      <SearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onAddWidget={addWidget} 
+      />
 
       {/* About Modal */}
       <Suspense fallback={null}>

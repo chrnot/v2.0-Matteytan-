@@ -630,7 +630,7 @@ export const SortingBoxWidget: React.FC = () => {
                     <div 
                       key={zone.id}
                       id={`zone-${zone.id}`}
-                      className={`relative flex flex-col items-center justify-start rounded-full border-4 border-dashed aspect-square w-full max-w-[200px] mx-auto p-4 transition-colors ${zone.colorClass} ${zone.hoverClass}`}
+                      className={`relative flex flex-col items-center justify-start rounded-full border-4 border-dashed aspect-square w-full max-w-[250px] md:max-w-[280px] mx-auto p-4 transition-colors ${zone.colorClass} ${zone.hoverClass}`}
                       style={{ boxShadow: 'inset 0 0 20px rgba(0,0,0,0.02)' }}
                     >
                       {/* Ring Central Header */}
@@ -684,7 +684,7 @@ export const SortingBoxWidget: React.FC = () => {
                     <div 
                       key={zone.id}
                       id={`zone-${zone.id}`}
-                      className="relative w-full flex flex-col justify-end min-h-[90px] px-4 pb-1 transition-all group"
+                      className="relative w-full flex flex-col justify-end min-h-[130px] px-4 pb-1 transition-all group"
                     >
                       {/* Shelf Label header */}
                       <span className="absolute left-4 top-0 text-[10px] font-black uppercase text-indigo-600/90 dark:text-indigo-400 bg-slate-50 dark:bg-slate-900/60 sm:bg-transparent px-1.5 py-0.5 rounded sm:rounded-none tracking-widest">
@@ -695,7 +695,7 @@ export const SortingBoxWidget: React.FC = () => {
                       <div className="absolute bottom-0 left-0 right-0 h-3.5 bg-amber-800/82 dark:bg-amber-950 border-t border-amber-550 rounded shadow-md pointer-events-none group-hover:bg-amber-700/90 transition-colors" />
 
                       {/* Elements lined up side-by-side gracefully like jars/books on shelf */}
-                      <div className="relative pb-3 flex flex-wrap gap-2.5 items-end pl-5 justify-start min-h-[64px] z-10">
+                      <div className="relative pb-3 flex flex-wrap gap-2.5 items-end pl-5 justify-start min-h-[90px] z-10">
                         <AnimatePresence mode="popLayout">
                           {itemsInZone.map((item) => (
                             <motion.div
@@ -739,7 +739,7 @@ export const SortingBoxWidget: React.FC = () => {
                     <div 
                       key={zone.id}
                       id={`zone-${zone.id}`}
-                      className={`relative flex flex-col justify-between min-h-[145px] max-h-[190px] rounded-2xl border-2 border-slate-350 select-none p-3 shadow-inner dark:border-slate-800/80 transition-all ${zone.colorClass} ${zone.hoverClass}`}
+                      className={`relative flex flex-col justify-between min-h-[220px] max-h-[300px] rounded-2xl border-2 border-slate-350 select-none p-3 shadow-inner dark:border-slate-800/80 transition-all ${zone.colorClass} ${zone.hoverClass}`}
                       style={{ 
                         boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.05)',
                       }}
