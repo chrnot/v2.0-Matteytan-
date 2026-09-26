@@ -32,6 +32,7 @@ export enum WidgetType {
   BASIC_STATISTICIAN = 'BASIC_STATISTICIAN',
   CENTIKUB_BOX = 'CENTIKUB_BOX',
   SORTING_BOX = 'SORTING_BOX',
+  NOTE = 'NOTE',
 }
 
 export enum MathArea {
@@ -66,6 +67,12 @@ export interface WidgetMetadata {
   klagSupport?: boolean;
 }
 
+export interface WidgetGroup {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface WidgetInstance {
   id: string;
   type: WidgetType;
@@ -74,6 +81,7 @@ export interface WidgetInstance {
   zIndex: number;
   width?: number;
   height?: number;
+  groupId?: string;
 }
 
 export interface WidgetProps {

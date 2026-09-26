@@ -4,9 +4,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Toolbar } from './components/Toolbar';
 import { WidgetWrapper } from './components/WidgetWrapper';
 import { Logo } from './components/Logo';
-import { WidgetType, WidgetInstance, BackgroundType, BackgroundConfig } from './types';
+import { WidgetType, WidgetInstance, WidgetGroup, BackgroundType, BackgroundConfig } from './types';
 import { Icons } from './components/icons';
 import { DrawingCanvas, DrawingCanvasHandle } from './components/DrawingCanvas';
+import { WidgetGroupFrame } from './components/WidgetGroupFrame';
+import { SelectionToolbar } from './components/SelectionToolbar';
 
 // Lazy load widgets
 const NumberLineWidget = lazy(() => import('./components/widgets/NumberLineWidget').then(m => ({ default: m.NumberLineWidget })));
@@ -40,6 +42,7 @@ const BasicStatisticianWidget = lazy(() => import('./components/widgets/BasicSta
 const CentikubBoxWidget = lazy(() => import('./components/widgets/CentikubBoxWidget').then(m => ({ default: m.CentikubBoxWidget })));
 const PiCodeWidget = lazy(() => import('./components/widgets/PiCodeWidget').then(m => ({ default: m.PiCodeWidget })));
 const SortingBoxWidget = lazy(() => import('./components/widgets/SortingBoxWidget').then(m => ({ default: m.SortingBoxWidget })));
+const NoteWidget = lazy(() => import('./components/widgets/NoteWidget').then(m => ({ default: m.NoteWidget })));
 
 // Lazy load modals
 const AboutModal = lazy(() => import('./components/AboutModal').then(m => ({ default: m.AboutModal })));
@@ -316,10 +319,18 @@ const WIDGET_CONFIG: Record<WidgetType, {
     category: [MathArea.TAL, MathArea.GEOMETRI],
     difficulty: Difficulty.LABORATIVE,
   },
+  [WidgetType.NOTE]: { 
+    title: 'Anteckningar', 
+    component: NoteWidget, 
+    size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 360 : 460, sw * 0.95), h: clamp(m ? 460 : 500, sh * 0.85) }),
+    category: [MathArea.PROBLEMLÖSNING],
+    difficulty: Difficulty.CONCRETIZING,
+  },
 };
 
 const EXTRA_TOOLS = [
   { type: 'DRAWING', icon: Icons.Pencil, label: 'Rita' },
+  { type: WidgetType.NOTE, icon: Icons.Note, label: 'Anteckning' },
   { type: WidgetType.RULER, icon: Icons.Ruler, label: 'Linjal' },
   { type: WidgetType.PROTRACTOR, icon: Icons.Rotate, label: 'Gradskiva' },
   { type: WidgetType.CALCULATOR, icon: Icons.Math, label: 'Räknare' },
@@ -329,6 +340,13 @@ const EXTRA_TOOLS = [
 
 const App: React.FC = () => {
   const [widgets, setWidgets] = useState<WidgetInstance[]>([]);
+  const [groups, setGroups] = useState<WidgetGroup[]>([]);
+  const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>([]);
+  const [isGroupInteracting, setIsGroupInteracting] = useState(false);
+  const [marqueeBox, setMarqueeBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const marqueeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingMarqueeRef = useRef(false);
+
   const [background, setBackground] = useState<BackgroundType>('GRID');
   const [topZ, setTopZ] = useState(150); 
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -362,16 +380,59 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Group creation & disbanding
+  const handleGroupSelected = useCallback(() => {
+    if (selectedWidgetIds.length < 2) return;
+    const newGroupId = `group-${Date.now()}`;
+    const groupNumber = groups.length + 1;
+    const colorPalette = ['#4f46e5', '#059669', '#d97706', '#db2777', '#0891b2', '#7c3aed'];
+    const color = colorPalette[groups.length % colorPalette.length];
+    
+    const newGroup: WidgetGroup = {
+      id: newGroupId,
+      name: `Grupp ${groupNumber}`,
+      color
+    };
+
+    setGroups(prev => [...prev, newGroup]);
+    setWidgets(prev => prev.map(w => selectedWidgetIds.includes(w.id) ? { ...w, groupId: newGroupId } : w));
+    setSelectedWidgetIds([]);
+  }, [selectedWidgetIds, groups]);
+
+  const handleUngroup = useCallback((groupId: string) => {
+    setWidgets(prev => prev.map(w => w.groupId === groupId ? { ...w, groupId: undefined } : w));
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+  }, []);
+
+  const handleUngroupSelected = useCallback(() => {
+    const selectedWidgets = widgets.filter(w => selectedWidgetIds.includes(w.id));
+    const targetGroupIds = Array.from(new Set(selectedWidgets.map(w => w.groupId).filter(Boolean))) as string[];
+    
+    if (targetGroupIds.length === 0) return;
+
+    setWidgets(prev => prev.map(w => (w.groupId && targetGroupIds.includes(w.groupId)) ? { ...w, groupId: undefined } : w));
+    setGroups(prev => prev.filter(g => !targetGroupIds.includes(g.id)));
+  }, [widgets, selectedWidgetIds]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsSearchOpen(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleUngroupSelected();
+        } else {
+          handleGroupSelected();
+        }
+      } else if (e.key === 'Escape') {
+        setSelectedWidgetIds([]);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleGroupSelected, handleUngroupSelected]);
 
   const addWidget = useCallback((type: WidgetType) => {
     const sw = window.innerWidth;
@@ -403,19 +464,45 @@ const App: React.FC = () => {
   }, []);
 
   const removeWidget = useCallback((id: string) => {
-    setWidgets(prev => prev.filter(w => w.id !== id));
+    setWidgets(prev => {
+      const target = prev.find(w => w.id === id);
+      const remaining = prev.filter(w => w.id !== id);
+      if (target?.groupId) {
+        const inGroup = remaining.filter(w => w.groupId === target.groupId);
+        if (inGroup.length <= 1) {
+          setGroups(gPrev => gPrev.filter(g => g.id !== target.groupId));
+          return remaining.map(w => w.groupId === target.groupId ? { ...w, groupId: undefined } : w);
+        }
+      }
+      return remaining;
+    });
     setTransparentWidgets(prev => {
         const next = { ...prev };
         delete next[id];
         return next;
     });
+    setSelectedWidgetIds(prev => prev.filter(wid => wid !== id));
   }, []);
 
   const bringToFront = useCallback((id: string) => {
     setTopZ(prevZ => {
         const newZ = prevZ + 1;
-        setWidgets(prev => prev.map(w => w.id === id ? { ...w, zIndex: newZ } : w));
+        setWidgets(prev => {
+          const target = prev.find(w => w.id === id);
+          if (target?.groupId) {
+            return prev.map(w => w.groupId === target.groupId ? { ...w, zIndex: newZ } : w);
+          }
+          return prev.map(w => w.id === id ? { ...w, zIndex: newZ } : w);
+        });
         return newZ;
+    });
+  }, []);
+
+  const bringGroupToFront = useCallback((groupId: string) => {
+    setTopZ(prevZ => {
+      const newZ = prevZ + 1;
+      setWidgets(prev => prev.map(w => w.groupId === groupId ? { ...w, zIndex: newZ } : w));
+      return newZ;
     });
   }, []);
 
@@ -430,6 +517,155 @@ const App: React.FC = () => {
   const toggleTransparency = useCallback((id: string, isTrans: boolean) => {
       setTransparentWidgets(prev => ({ ...prev, [id]: isTrans }));
   }, []);
+
+  // Multi-selection handlers
+  const toggleSelectWidget = useCallback((id: string) => {
+    setSelectedWidgetIds(prev => 
+      prev.includes(id) ? prev.filter(wid => wid !== id) : [...prev, id]
+    );
+  }, []);
+
+  const selectAllWidgets = useCallback(() => {
+    setSelectedWidgetIds(widgets.map(w => w.id));
+  }, [widgets]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedWidgetIds([]);
+  }, []);
+
+  // Group movement: moving group via frame or moving member widget
+  const handleMoveGroup = useCallback((groupId: string, deltaX: number, deltaY: number, finished: boolean) => {
+    if (finished) {
+      setIsGroupInteracting(false);
+      return;
+    }
+    setIsGroupInteracting(true);
+    setWidgets(prev => prev.map(w => w.groupId === groupId ? { ...w, x: w.x + deltaX, y: w.y + deltaY } : w));
+  }, []);
+
+  const handleWidgetDragDelta = useCallback((id: string, deltaX: number, deltaY: number, finished: boolean) => {
+    const widget = widgets.find(w => w.id === id);
+    if (!widget || !widget.groupId) {
+      if (finished) setIsGroupInteracting(false);
+      return;
+    }
+    if (finished) {
+      setIsGroupInteracting(false);
+      return;
+    }
+    setIsGroupInteracting(true);
+    setWidgets(prev => prev.map(w => {
+      if (w.groupId === widget.groupId && w.id !== id) {
+        return { ...w, x: w.x + deltaX, y: w.y + deltaY };
+      }
+      return w;
+    }));
+  }, [widgets]);
+
+  // Group scaling
+  const handleScaleGroup = useCallback((
+    groupId: string,
+    scaleX: number,
+    scaleY: number,
+    finished: boolean,
+    origin: { minX: number; minY: number },
+    snapshots: { id: string; x: number; y: number; width: number; height: number }[]
+  ) => {
+    if (finished) {
+      setIsGroupInteracting(false);
+      return;
+    }
+    setIsGroupInteracting(true);
+    setWidgets(prev => prev.map(w => {
+      const snap = snapshots.find(s => s.id === w.id);
+      if (!snap) return w;
+      const newX = origin.minX + (snap.x - origin.minX) * scaleX;
+      const newY = origin.minY + (snap.y - origin.minY) * scaleY;
+      const newW = Math.max(220, snap.width * scaleX);
+      const newH = Math.max(160, snap.height * scaleY);
+      return {
+        ...w,
+        x: Math.round(newX),
+        y: Math.round(newY),
+        width: Math.round(newW),
+        height: Math.round(newH)
+      };
+    }));
+  }, []);
+
+  const handleQuickScale = useCallback((groupId: string, factor: number) => {
+    setWidgets(prev => {
+      const groupWidgets = prev.filter(w => w.groupId === groupId);
+      if (groupWidgets.length === 0) return prev;
+      const minX = Math.min(...groupWidgets.map(w => w.x));
+      const minY = Math.min(...groupWidgets.map(w => w.y));
+      return prev.map(w => {
+        if (w.groupId !== groupId) return w;
+        const newX = minX + (w.x - minX) * factor;
+        const newY = minY + (w.y - minY) * factor;
+        const newW = Math.max(220, (w.width || 400) * factor);
+        const newH = Math.max(160, (w.height || 300) * factor);
+        return {
+          ...w,
+          x: Math.round(newX),
+          y: Math.round(newY),
+          width: Math.round(newW),
+          height: Math.round(newH)
+        };
+      });
+    });
+  }, []);
+
+  // Canvas marquee selection handlers
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (isDrawingMode) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input') || target.closest('textarea') || target.closest('.widget-shadow')) {
+      return;
+    }
+    marqueeStartRef.current = { x: e.clientX, y: e.clientY };
+    isDraggingMarqueeRef.current = false;
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (!marqueeStartRef.current || isDrawingMode) return;
+    const startX = marqueeStartRef.current.x;
+    const startY = marqueeStartRef.current.y;
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+
+    const left = Math.min(startX, currentX);
+    const top = Math.min(startY, currentY);
+    const width = Math.abs(currentX - startX);
+    const height = Math.abs(currentY - startY);
+
+    if (width > 6 || height > 6) {
+      isDraggingMarqueeRef.current = true;
+      setMarqueeBox({ left, top, width, height });
+
+      const hits = widgets.filter(w => {
+        const wWidth = w.width || 400;
+        const wHeight = w.height || 300;
+        return !(
+          w.x > left + width ||
+          w.x + wWidth < left ||
+          w.y > top + height ||
+          w.y + wHeight < top
+        );
+      }).map(w => w.id);
+
+      setSelectedWidgetIds(prev => e.shiftKey ? Array.from(new Set([...prev, ...hits])) : hits);
+    }
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (marqueeStartRef.current && !isDraggingMarqueeRef.current) {
+      setSelectedWidgetIds([]);
+    }
+    marqueeStartRef.current = null;
+    isDraggingMarqueeRef.current = false;
+    setMarqueeBox(null);
+  };
 
   const arrangeWidgets = useCallback(() => {
     setWidgets(prevWidgets => {
@@ -506,7 +742,12 @@ const App: React.FC = () => {
 
 
   return (
-    <div className={`w-full h-full relative overflow-hidden transition-colors duration-500 ${getBackgroundClass()}`}>
+    <div 
+      className={`w-full h-full relative overflow-hidden transition-colors duration-500 ${getBackgroundClass()}`}
+      onMouseDown={handleCanvasMouseDown}
+      onMouseMove={handleCanvasMouseMove}
+      onMouseUp={handleCanvasMouseUp}
+    >
       
       <Sidebar 
         isOpen={isSidebarOpen}
@@ -522,6 +763,40 @@ const App: React.FC = () => {
       {/* Top Controls Bar */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[2000] flex items-start gap-2">
          
+         {/* Grouping / Selection Button */}
+         <button 
+            onClick={selectedWidgetIds.length >= 2 ? handleGroupSelected : () => {
+              if (selectedWidgetIds.length > 0) {
+                clearSelection();
+              } else {
+                selectAllWidgets();
+              }
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-full shadow-lg font-bold text-xs sm:text-sm transition-all hover:scale-105 active:scale-95 ${
+              selectedWidgetIds.length >= 2
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white ring-2 ring-blue-300'
+                : selectedWidgetIds.length > 0
+                  ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300'
+                  : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:text-blue-600'
+            }`}
+            title={
+              selectedWidgetIds.length >= 2
+                ? `Gruppera ${selectedWidgetIds.length} markerade widgetar`
+                : selectedWidgetIds.length > 0
+                  ? 'Avmarkera alla'
+                  : 'Markera alla widgetar'
+            }
+         >
+             <Icons.Group size={16} />
+             <span className="hidden md:inline">
+               {selectedWidgetIds.length >= 2 
+                 ? `Gruppera (${selectedWidgetIds.length})` 
+                 : selectedWidgetIds.length > 0 
+                   ? `Markerade (${selectedWidgetIds.length})` 
+                   : 'Gruppera'}
+             </span>
+         </button>
+
          <button 
             onClick={arrangeWidgets}
             disabled={widgets.length === 0}
@@ -593,8 +868,43 @@ const App: React.FC = () => {
         drawFilled={drawFilled}
       />
 
+      {/* Marquee Drag Selection Box */}
+      {marqueeBox && (
+        <div
+          className="fixed border-2 border-dashed border-blue-500 bg-blue-500/10 rounded-xl pointer-events-none z-[1900] transition-none"
+          style={{
+            left: marqueeBox.left,
+            top: marqueeBox.top,
+            width: marqueeBox.width,
+            height: marqueeBox.height,
+          }}
+        />
+      )}
+
+      {/* Widget Group Frames */}
+      {groups.map(group => {
+        const groupWidgets = widgets.filter(w => w.groupId === group.id);
+        if (groupWidgets.length === 0) return null;
+        return (
+          <WidgetGroupFrame
+            key={group.id}
+            group={group}
+            widgets={groupWidgets}
+            onUngroup={handleUngroup}
+            onMoveGroup={handleMoveGroup}
+            onScaleGroup={handleScaleGroup}
+            onQuickScale={handleQuickScale}
+            onFocusGroup={bringGroupToFront}
+            isDarkMode={isDarkMode}
+          />
+        );
+      })}
+
       {widgets.map(widget => {
         const config = WIDGET_CONFIG[widget.type];
+        const widgetGroup = widget.groupId ? groups.find(g => g.id === widget.groupId) : undefined;
+        const isSelected = selectedWidgetIds.includes(widget.id);
+
         return (
           <WidgetWrapper
             key={widget.id}
@@ -607,10 +917,17 @@ const App: React.FC = () => {
             zIndex={widget.zIndex}
             transparent={transparentWidgets[widget.id]}
             klagSupport={config.klagSupport}
+            isSelected={isSelected}
+            groupId={widget.groupId}
+            groupName={widgetGroup?.name}
+            groupColor={widgetGroup?.color}
+            isGroupInteracting={isGroupInteracting}
             onClose={removeWidget}
             onFocus={bringToFront}
             onMove={updatePosition}
+            onDragDelta={handleWidgetDragDelta}
             onResize={updateSize}
+            onToggleSelect={toggleSelectWidget}
           >
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-slate-50 rounded-xl"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
               <config.component 
@@ -622,6 +939,18 @@ const App: React.FC = () => {
           </WidgetWrapper>
         );
       })}
+
+      {/* Selection Floating Action Bar */}
+      <SelectionToolbar
+        selectedCount={selectedWidgetIds.length}
+        totalWidgets={widgets.length}
+        hasGroupedSelected={widgets.some(w => selectedWidgetIds.includes(w.id) && !!w.groupId)}
+        onGroup={handleGroupSelected}
+        onUngroupSelected={handleUngroupSelected}
+        onSelectAll={selectAllWidgets}
+        onClearSelection={clearSelection}
+        isDarkMode={isDarkMode}
+      />
 
       {/* Search Modal */}
       <SearchModal 

@@ -373,5 +373,17 @@ export const WIDGET_SEARCH_INDEX: SearchableWidget[] = [
       'sorteringsboxen', 'sortera', 'klassificera', 'mängdlära', 'färg', 'form', 
       'kategorier', 'attribut', 'sorteringsregler', 'hylla', 'lådor', 'venndiagram'
     ]
+  },
+  {
+    type: WidgetType.NOTE,
+    title: 'Anteckningar',
+    category: [MathArea.PROBLEMLÖSNING],
+    difficulty: Difficulty.CONCRETIZING,
+    description: 'Skriv noteringar, instruktioner eller uppgiftsbeskrivningar direkt på whiteboarden med grundläggande textformatering, mallar och post-it-stilar.',
+    searchTerms: [
+      'anteckningar', 'anteckning', 'notering', 'noteringar', 'uppgift', 'uppgiftsbeskrivning', 
+      'text', 'post-it', 'skriva', 'instruktion', 'mål', 'checklista', 'kom ihåg', 
+      'formatering', 'whiteboard', 'block', 'lapp', 'klisterlapp', 'steg', 'delmoment'
+    ]
   }
 ];

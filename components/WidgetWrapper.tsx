@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { Icons } from './icons';
 
@@ -13,10 +12,18 @@ interface WidgetWrapperProps {
   zIndex: number;
   transparent?: boolean;
   klagSupport?: boolean;
+  isSelected?: boolean;
+  groupId?: string;
+  groupName?: string;
+  groupColor?: string;
+  isGroupInteracting?: boolean;
   onClose: (id: string) => void;
   onFocus: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
+  onDragDelta?: (id: string, deltaX: number, deltaY: number, finished: boolean) => void;
   onResize?: (id: string, width: number, height: number) => void;
+  onResizeDelta?: (id: string, deltaW: number, deltaH: number, finished: boolean) => void;
+  onToggleSelect?: (id: string) => void;
 }
 
 export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
@@ -30,10 +37,18 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   zIndex,
   transparent = false,
   klagSupport = false,
+  isSelected = false,
+  groupId,
+  groupName,
+  groupColor,
+  isGroupInteracting = false,
   onClose,
   onFocus,
   onMove,
+  onDragDelta,
   onResize,
+  onResizeDelta,
+  onToggleSelect,
 }) => {
   const [position, setPosition] = useState({ x: initialX, y: initialY });
   const [size, setSize] = useState({ width: initialWidth, height: initialHeight });
@@ -50,10 +65,11 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   });
 
   const dragStart = useRef({ x: 0, y: 0 });
+  const dragLastPos = useRef({ x: initialX, y: initialY });
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Sync with props when they change (e.g. via "Arrange" function)
+  // Sync with props when they change (e.g. via "Arrange" or group move/scale)
   useEffect(() => {
     if (!isDragging && !isResizing) {
       setPosition({ x: initialX, y: initialY });
@@ -63,7 +79,6 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   }, [initialX, initialY, initialWidth, initialHeight, isDragging, isResizing]);
 
   // --- DRAGGING LOGIC ---
-  
   const startDrag = (clientX: number, clientY: number) => {
     onFocus(id);
     setIsDragging(true);
@@ -71,10 +86,15 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       x: clientX - position.x,
       y: clientY - position.y,
     };
+    dragLastPos.current = { x: position.x, y: position.y };
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation(); 
+    if (e.shiftKey && onToggleSelect) {
+      onToggleSelect(id);
+      return;
+    }
     startDrag(e.clientX, e.clientY);
   };
 
@@ -94,7 +114,15 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
         if (newX + size.width < 50) newX = 50 - size.width;
         if (newX > window.innerWidth - 50) newX = window.innerWidth - 50;
 
+        const deltaX = newX - dragLastPos.current.x;
+        const deltaY = newY - dragLastPos.current.y;
+        dragLastPos.current = { x: newX, y: newY };
+
         setPosition({ x: newX, y: newY });
+
+        if (onDragDelta && (deltaX !== 0 || deltaY !== 0)) {
+          onDragDelta(id, deltaX, deltaY, false);
+        }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -116,6 +144,9 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       if (isDragging) {
         setIsDragging(false);
         onMove(id, position.x, position.y);
+        if (onDragDelta) {
+          onDragDelta(id, 0, 0, true);
+        }
       }
     };
 
@@ -131,11 +162,9 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleEnd);
     };
-  }, [isDragging, id, onMove, position.x, position.y, size.width]);
-
+  }, [isDragging, id, onMove, onDragDelta, position.x, position.y, size.width]);
 
   // --- RESIZING LOGIC ---
-  
   const startResize = (clientX: number, clientY: number) => {
       onFocus(id);
       setIsResizing(true);
@@ -164,10 +193,20 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
           const deltaX = clientX - resizeStart.current.x;
           const deltaY = clientY - resizeStart.current.y;
           
+          const newW = Math.max(280, resizeStart.current.w + deltaX);
+          const newH = Math.max(200, resizeStart.current.h + deltaY);
+
+          const prevW = size.width;
+          const prevH = size.height;
+          
           setSize({
-              width: Math.max(280, resizeStart.current.w + deltaX),
-              height: Math.max(200, resizeStart.current.h + deltaY)
+              width: newW,
+              height: newH
           });
+
+          if (onResizeDelta && (newW !== prevW || newH !== prevH)) {
+            onResizeDelta(id, newW - prevW, newH - prevH, false);
+          }
       };
 
       const onMouseMove = (e: MouseEvent) => {
@@ -189,6 +228,9 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
             if (onResize) {
                 onResize(id, size.width, size.height);
             }
+            if (onResizeDelta) {
+              onResizeDelta(id, 0, 0, true);
+            }
           }
       };
 
@@ -204,14 +246,17 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
           window.removeEventListener('touchmove', onTouchMove);
           window.removeEventListener('touchend', onEnd);
       };
-  }, [isResizing, id, onResize, size.width, size.height]);
-
+  }, [isResizing, id, onResize, onResizeDelta, size.width, size.height]);
 
   const containerClasses = transparent 
-    ? "fixed flex flex-col rounded-xl overflow-visible transition-all duration-500 ease-in-out max-w-[98vw] max-h-[90vh]"
-    : "fixed flex flex-col bg-[var(--surface-primary)] rounded-xl widget-shadow border border-[var(--sidebar-border)] overflow-hidden transition-all duration-500 ease-in-out max-w-[98vw] max-h-[90vh]";
+    ? `fixed flex flex-col rounded-xl overflow-visible transition-all duration-300 ease-in-out max-w-[98vw] max-h-[90vh] ${
+        isSelected ? 'ring-4 ring-blue-500/80 shadow-2xl' : ''
+      }`
+    : `fixed flex flex-col bg-[var(--surface-primary)] rounded-xl widget-shadow border border-[var(--sidebar-border)] overflow-hidden transition-all duration-300 ease-in-out max-w-[98vw] max-h-[90vh] ${
+        isSelected ? 'ring-4 ring-blue-500/80 shadow-2xl scale-[1.008]' : ''
+      }`;
 
-  // Disable transition during interaction
+  // Disable transition during drag/resize or group interaction to prevent rubberbanding/lag
   const dynamicStyle = {
     left: position.x,
     top: position.y,
@@ -219,7 +264,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
     height: transparent ? 'auto' : size.height,
     zIndex: zIndex,
     touchAction: 'none',
-    transition: isDragging || isResizing ? 'none' : 'all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    transition: isDragging || isResizing || isGroupInteracting ? 'none' : 'all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)'
   } as React.CSSProperties;
 
   return (
@@ -227,7 +272,12 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       ref={wrapperRef}
       className={containerClasses}
       style={dynamicStyle}
-      onMouseDown={() => onFocus(id)}
+      onMouseDown={(e) => {
+        onFocus(id);
+        if (e.shiftKey && onToggleSelect) {
+          onToggleSelect(id);
+        }
+      }}
       onTouchStart={() => onFocus(id)}
     >
       {!transparent && (
@@ -236,9 +286,47 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
-          <span className="font-semibold text-[var(--text-main)] text-sm flex items-center gap-2 truncate pr-4 pointer-events-none opacity-80">
-            {title}
-          </span>
+          <div className="flex items-center gap-2 min-w-0 pr-2">
+            {/* Multi-selection toggle checkbox */}
+            {onToggleSelect && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelect(id);
+                }}
+                className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
+                  isSelected 
+                    ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400' 
+                    : 'border border-slate-300 dark:border-slate-600 hover:border-blue-400 text-transparent hover:text-slate-400 bg-white/50 dark:bg-slate-700/50'
+                }`}
+                title={isSelected ? 'Avmarkera widget' : 'Markera för att gruppera (Shift-klicka)'}
+              >
+                <Icons.Check size={12} className={isSelected ? 'opacity-100 stroke-[3]' : 'opacity-0'} />
+              </button>
+            )}
+
+            <span className="font-semibold text-[var(--text-main)] text-sm truncate pointer-events-none opacity-90">
+              {title}
+            </span>
+
+            {/* Group badge */}
+            {groupId && groupName && (
+              <span 
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border flex items-center gap-1 select-none flex-shrink-0"
+                style={{
+                  backgroundColor: `${groupColor || '#6366f1'}15`,
+                  borderColor: `${groupColor || '#6366f1'}35`,
+                  color: groupColor || '#6366f1'
+                }}
+                title={`Grupperad i ${groupName}`}
+              >
+                <Icons.Link size={9} />
+                <span>{groupName}</span>
+              </span>
+            )}
+          </div>
+
           <div className="flex items-center gap-1">
             {klagSupport && (
               <div className="flex items-center bg-slate-200/50 p-0.5 rounded-lg mr-2">
@@ -263,7 +351,8 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
             )}
             <button
               onClick={(e) => { e.stopPropagation(); onClose(id); }}
-              className="p-2 hover:bg-red-100 text-slate-400 hover:text-red-500 rounded transition-colors"
+              className="p-1.5 hover:bg-red-100 dark:hover:bg-red-950/40 text-slate-400 hover:text-red-500 rounded transition-colors"
+              title="Stäng fönster"
             >
               <Icons.Close size={18} />
             </button>
@@ -272,20 +361,51 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       )}
 
       {transparent && (
-         <div className="absolute -top-10 left-0 flex gap-2 bg-[var(--surface-primary)]/90 backdrop-blur border border-[var(--sidebar-border)] rounded-lg p-1 shadow-sm z-50">
+         <div className="absolute -top-10 left-0 flex items-center gap-1.5 bg-[var(--surface-primary)]/90 backdrop-blur border border-[var(--sidebar-border)] rounded-lg p-1 shadow-sm z-50">
+            {onToggleSelect && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelect(id);
+                }}
+                className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
+                  isSelected 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : 'border border-slate-300 dark:border-slate-600 hover:border-blue-400 text-transparent hover:text-slate-400 bg-white/50'
+                }`}
+                title={isSelected ? 'Avmarkera' : 'Markera för grupp'}
+              >
+                <Icons.Check size={12} className={isSelected ? 'opacity-100 stroke-[3]' : 'opacity-0'} />
+              </button>
+            )}
             <div 
-                className="p-2 cursor-move text-[var(--text-main)] opacity-60 hover:bg-[var(--sidebar-hover)] rounded touch-none"
+                className="p-1.5 cursor-move text-[var(--text-main)] opacity-60 hover:bg-[var(--sidebar-hover)] rounded touch-none"
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 title="Flytta"
             >
-                <Icons.Move size={20} />
+                <Icons.Move size={18} />
             </div>
+            {groupId && groupName && (
+              <span 
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1"
+                style={{
+                  backgroundColor: `${groupColor || '#6366f1'}15`,
+                  borderColor: `${groupColor || '#6366f1'}35`,
+                  color: groupColor || '#6366f1'
+                }}
+              >
+                <Icons.Link size={9} />
+                <span>{groupName}</span>
+              </span>
+            )}
              <button
               onClick={(e) => { e.stopPropagation(); onClose(id); }}
-              className="p-2 hover:bg-red-100 text-slate-400 hover:text-red-500 rounded transition-colors"
+              className="p-1.5 hover:bg-red-100 dark:hover:bg-red-950/40 text-slate-400 hover:text-red-500 rounded transition-colors"
+              title="Stäng"
             >
-              <Icons.Close size={20} />
+              <Icons.Close size={18} />
             </button>
          </div>
       )}
@@ -356,9 +476,10 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
       {!transparent && (
           <div 
-            className="absolute bottom-0 right-0 w-10 h-10 cursor-nwse-resize z-20 flex items-end justify-end p-1.5 hover:bg-slate-100 rounded-tl touch-none"
+            className="absolute bottom-0 right-0 w-10 h-10 cursor-nwse-resize z-20 flex items-end justify-end p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-tl touch-none"
             onMouseDown={handleResizeMouseDown}
             onTouchStart={handleResizeTouchStart}
+            title={groupId ? "Ändra storlek (grupperad)" : "Ändra storlek"}
           >
               <div className="w-0 h-0 border-b-[8px] border-r-[8px] border-l-[8px] border-t-[8px] border-b-slate-400 border-r-slate-400 border-l-transparent border-t-transparent opacity-50"></div>
           </div>
