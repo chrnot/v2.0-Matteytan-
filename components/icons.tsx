@@ -87,10 +87,18 @@ import {
   Ungroup,
   BoxSelect,
   Link,
-  Unlink
+  Unlink,
+  Download,
+  Image,
+  Camera,
+  FileDown
 } from 'lucide-react';
 
 export const Icons = {
+  Download,
+  Image,
+  Camera,
+  FileDown,
   Group,
   Ungroup,
   BoxSelect,

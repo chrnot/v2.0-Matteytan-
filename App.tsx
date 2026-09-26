@@ -9,6 +9,7 @@ import { Icons } from './components/icons';
 import { DrawingCanvas, DrawingCanvasHandle } from './components/DrawingCanvas';
 import { WidgetGroupFrame } from './components/WidgetGroupFrame';
 import { SelectionToolbar } from './components/SelectionToolbar';
+import { ExportModal } from './components/ExportModal';
 
 // Lazy load widgets
 const NumberLineWidget = lazy(() => import('./components/widgets/NumberLineWidget').then(m => ({ default: m.NumberLineWidget })));
@@ -330,6 +331,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
 
 const EXTRA_TOOLS = [
   { type: 'DRAWING', icon: Icons.Pencil, label: 'Rita' },
+  { type: 'EXPORT', icon: Icons.Download, label: 'Exportera PNG' },
   { type: WidgetType.NOTE, icon: Icons.Note, label: 'Anteckning' },
   { type: WidgetType.RULER, icon: Icons.Ruler, label: 'Linjal' },
   { type: WidgetType.PROTRACTOR, icon: Icons.Rotate, label: 'Gradskiva' },
@@ -343,6 +345,8 @@ const App: React.FC = () => {
   const [groups, setGroups] = useState<WidgetGroup[]>([]);
   const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>([]);
   const [isGroupInteracting, setIsGroupInteracting] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const whiteboardRef = useRef<HTMLDivElement>(null);
   const [marqueeBox, setMarqueeBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isDraggingMarqueeRef = useRef(false);
@@ -419,6 +423,9 @@ const App: React.FC = () => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsSearchOpen(true);
+      } else if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'e')) {
+        e.preventDefault();
+        setIsExportOpen(true);
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'g') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -731,6 +738,9 @@ const App: React.FC = () => {
     if (tool.type === 'DRAWING') {
       setIsDrawingMode(prev => !prev);
       setIsToolsOpen(false);
+    } else if (tool.type === 'EXPORT') {
+      setIsExportOpen(true);
+      setIsToolsOpen(false);
     } else {
       addWidget(tool.type as WidgetType);
     }
@@ -743,25 +753,28 @@ const App: React.FC = () => {
 
   return (
     <div 
+      ref={whiteboardRef}
       className={`w-full h-full relative overflow-hidden transition-colors duration-500 ${getBackgroundClass()}`}
       onMouseDown={handleCanvasMouseDown}
       onMouseMove={handleCanvasMouseMove}
       onMouseUp={handleCanvasMouseUp}
     >
       
-      <Sidebar 
-        isOpen={isSidebarOpen}
-        onOpenChange={setIsSidebarOpen}
-        onAddWidget={addWidget} 
-        widgetMetadata={WIDGET_CONFIG} 
-        onPiClick={() => setIsPiCodeOpen(true)}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
-        onOpenSearch={() => setIsSearchOpen(true)}
-      />
+      <div className="export-ignore" data-export-ignore="true">
+        <Sidebar 
+          isOpen={isSidebarOpen}
+          onOpenChange={setIsSidebarOpen}
+          onAddWidget={addWidget} 
+          widgetMetadata={WIDGET_CONFIG} 
+          onPiClick={() => setIsPiCodeOpen(true)}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
+          onOpenSearch={() => setIsSearchOpen(true)}
+        />
+      </div>
 
       {/* Top Controls Bar */}
-      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[2000] flex items-start gap-2">
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[2000] flex items-start gap-2 export-ignore" data-export-ignore="true">
          
          {/* Grouping / Selection Button */}
          <button 
@@ -804,6 +817,15 @@ const App: React.FC = () => {
             title="Ordna fönster i rutnät"
          >
              <span className="text-lg leading-none">🧩</span> <span className="hidden md:inline uppercase tracking-widest">Ordna</span>
+         </button>
+
+         {/* Export Whiteboard Button */}
+         <button 
+            onClick={() => setIsExportOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all font-bold text-xs sm:text-sm"
+            title="Exportera whiteboard som PNG-bild (Ctrl+S / Cmd+S)"
+         >
+             <Icons.Download size={16} /> <span className="hidden md:inline uppercase tracking-widest">Exportera</span>
          </button>
 
          <button 
@@ -981,7 +1003,7 @@ const App: React.FC = () => {
       {/* GLOBAL FOOTER ELEMENTS */}
       
       {/* Bottom Left: Creative Commons */}
-      <div className="absolute bottom-4 left-6 z-[2000] pointer-events-auto flex items-center gap-2 transition-opacity duration-300 text-shadow-sm">
+      <div className="absolute bottom-4 left-6 z-[2000] pointer-events-auto flex items-center gap-2 transition-opacity duration-300 text-shadow-sm export-ignore" data-export-ignore="true">
           <svg className="w-4 h-4 text-slate-400 opacity-80" viewBox="0 0 496 512" fill="currentColor">
             <path d="M245.83 214.87l-33.22 17.28c-9.43-19.58-25.24-19.93-27.46-19.93-22.13 0-33.22 14.61-33.22 43.89 0 23.57 9.21 43.89 33.22 43.89 20 0 33.22-14.61 33.22-43.89h33.22c0 46.14-31.09 77.12-66.44 77.12-46.92 0-66.44-32.63-66.44-77.12 0-43.55 17.28-77.12 66.44-77.12 26.74 0 53.21 10.82 66.44 35.88zm143.84 0l-33.22 17.28c-9.43-19.58-25.24-19.93-27.46-19.93-22.13 0-33.22 14.61-33.22 43.89 0 23.57 9.21 43.89 33.22 43.89 20 0 33.22-14.61 33.22-43.89h33.22c0 46.14-31.09 77.12-66.44 77.12-46.92 0-66.44-32.63-66.44-77.12 0-43.55 17.28-77.12 66.44-77.12 26.74 0 53.21 10.82 66.44 35.88zM247.7 8C104.74 8 8 123.04 8 256c0 132.96 96.74 248 239.7 248 142.96 0 248.3-115.04 248.3-248C496 123.04 390.66 8 247.7 8zm.3 450.7c-112.03 0-203-90.97-203-203s90.97-203 203-203 203 90.97 203 203-90.97 203-203 203z"/>
           </svg>
@@ -991,7 +1013,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Bottom Center: Main Links */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex flex-wrap justify-center items-center gap-4 sm:gap-8 pointer-events-auto transition-opacity duration-300">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex flex-wrap justify-center items-center gap-4 sm:gap-8 pointer-events-auto transition-opacity duration-300 export-ignore" data-export-ignore="true">
           <button 
             onClick={() => setIsAboutOpen(true)}
             className="text-[10px] font-semibold tracking-[0.2em] uppercase text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
@@ -1015,7 +1037,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Bottom Right: Netlify Link */}
-      <div className="absolute bottom-4 right-6 z-[2000] pointer-events-auto transition-opacity duration-300">
+      <div className="absolute bottom-4 right-6 z-[2000] pointer-events-auto transition-opacity duration-300 export-ignore" data-export-ignore="true">
           <a 
             href="https://www.netlify.com/" 
             target="_blank" 
@@ -1026,23 +1048,34 @@ const App: React.FC = () => {
           </a>
       </div>
 
-      <Toolbar 
-        onAddWidget={addWidget} 
-        onSetBackground={setBackground}
-        currentBackground={background}
-        isDrawingMode={isDrawingMode}
-        setIsDrawingMode={setIsDrawingMode}
-        drawColor={drawColor}
-        setDrawColor={setDrawColor}
-        drawWidth={drawWidth}
-        setDrawWidth={setDrawWidth}
-        isEraser={isEraser}
-        setIsEraser={setIsEraser}
-        onClearDrawings={clearDrawings}
-        drawTool={drawTool}
-        setDrawTool={setDrawTool}
-        drawFilled={drawFilled}
-        setDrawFilled={setDrawFilled}
+      <div className="export-ignore" data-export-ignore="true">
+        <Toolbar 
+          onAddWidget={addWidget} 
+          onSetBackground={setBackground}
+          currentBackground={background}
+          isDrawingMode={isDrawingMode}
+          setIsDrawingMode={setIsDrawingMode}
+          drawColor={drawColor}
+          setDrawColor={setDrawColor}
+          drawWidth={drawWidth}
+          setDrawWidth={setDrawWidth}
+          isEraser={isEraser}
+          setIsEraser={setIsEraser}
+          onClearDrawings={clearDrawings}
+          drawTool={drawTool}
+          setDrawTool={setDrawTool}
+          drawFilled={drawFilled}
+          setDrawFilled={setDrawFilled}
+        />
+      </div>
+
+      {/* Export Whiteboard Modal */}
+      <ExportModal 
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        whiteboardElement={whiteboardRef.current}
+        widgets={widgets}
+        isDarkMode={isDarkMode}
       />
     </div>
   );
