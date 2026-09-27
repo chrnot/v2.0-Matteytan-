@@ -91,7 +91,10 @@ import {
   Download,
   Image,
   Camera,
-  FileDown
+  FileDown,
+  Save,
+  FolderOpen,
+  Loader2
 } from 'lucide-react';
 
 export const Icons = {
@@ -189,5 +192,8 @@ export const Icons = {
   CheckSquare,
   Copy,
   Palette,
-  Type
+  Type,
+  Save,
+  FolderOpen,
+  Loader: Loader2
 };

@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Toolbar } from './components/Toolbar';
 import { WidgetWrapper } from './components/WidgetWrapper';
 import { Logo } from './components/Logo';
-import { WidgetType, WidgetInstance, WidgetGroup, BackgroundType, BackgroundConfig } from './types';
+import { WidgetType, WidgetInstance, WidgetGroup, BackgroundType, BackgroundConfig, LessonSnapshot, SavedLesson } from './types';
 import { Icons } from './components/icons';
 import { DrawingCanvas, DrawingCanvasHandle } from './components/DrawingCanvas';
 import { WidgetGroupFrame } from './components/WidgetGroupFrame';
 import { SelectionToolbar } from './components/SelectionToolbar';
 import { ExportModal } from './components/ExportModal';
+import { LessonsModal } from './components/LessonsModal';
+import { saveAutosave, loadAutosave, listLessons, saveLesson, deleteLesson, renameLesson } from './utils/persistence';
 
 // Lazy load widgets
 const NumberLineWidget = lazy(() => import('./components/widgets/NumberLineWidget').then(m => ({ default: m.NumberLineWidget })));
@@ -332,6 +334,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
 const EXTRA_TOOLS = [
   { type: 'DRAWING', icon: Icons.Pencil, label: 'Rita' },
   { type: 'EXPORT', icon: Icons.Download, label: 'Exportera PNG' },
+  { type: 'LESSONS', icon: Icons.FolderOpen, label: 'Lektioner' },
   { type: WidgetType.NOTE, icon: Icons.Note, label: 'Anteckning' },
   { type: WidgetType.RULER, icon: Icons.Ruler, label: 'Linjal' },
   { type: WidgetType.PROTRACTOR, icon: Icons.Rotate, label: 'Gradskiva' },
@@ -346,6 +349,10 @@ const App: React.FC = () => {
   const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>([]);
   const [isGroupInteracting, setIsGroupInteracting] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isLessonsModalOpen, setIsLessonsModalOpen] = useState(false);
+  const [lessons, setLessons] = useState<SavedLesson[]>(() => listLessons());
+  const hasHydratedRef = useRef(false);
+  const autosaveTimerRef = useRef<number | null>(null);
   const whiteboardRef = useRef<HTMLDivElement>(null);
   const [marqueeBox, setMarqueeBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -383,6 +390,75 @@ const App: React.FC = () => {
       localStorage.setItem('matteytan-theme', 'light');
     }
   }, [isDarkMode]);
+
+  // --- Autosave & Save/Load Lesson ---
+
+  const buildSnapshot = useCallback((): LessonSnapshot => ({
+    widgets,
+    groups,
+    background,
+    transparentWidgets,
+    topZ,
+    drawingImage: drawingCanvasRef.current?.exportImage() ?? null,
+  }), [widgets, groups, background, transparentWidgets, topZ]);
+
+  const applySnapshot = useCallback((snapshot: LessonSnapshot) => {
+    setWidgets(snapshot.widgets || []);
+    setGroups(snapshot.groups || []);
+    setBackground(snapshot.background || 'GRID');
+    setTransparentWidgets(snapshot.transparentWidgets || {});
+    setTopZ(snapshot.topZ || 150);
+    setSelectedWidgetIds([]);
+    drawingCanvasRef.current?.loadImage(snapshot.drawingImage ?? null);
+  }, []);
+
+  // Restore the last autosaved whiteboard once, on first mount.
+  useEffect(() => {
+    const snapshot = loadAutosave();
+    if (snapshot) applySnapshot(snapshot);
+    hasHydratedRef.current = true;
+  }, [applySnapshot]);
+
+  // Debounced autosave: mirrors the whiteboard into localStorage after every change.
+  const scheduleAutosave = useCallback(() => {
+    if (!hasHydratedRef.current) return;
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => {
+      saveAutosave(buildSnapshot());
+    }, 800);
+  }, [buildSnapshot]);
+
+  useEffect(() => {
+    scheduleAutosave();
+    return () => {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    };
+  }, [widgets, groups, background, transparentWidgets, topZ, scheduleAutosave]);
+
+  // Flush a final autosave if the tab is closed before the debounce fires.
+  useEffect(() => {
+    const handleBeforeUnload = () => saveAutosave(buildSnapshot());
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [buildSnapshot]);
+
+  const handleSaveLesson = useCallback((name: string, existingId?: string) => {
+    const updated = saveLesson(name, buildSnapshot(), existingId);
+    setLessons(updated);
+  }, [buildSnapshot]);
+
+  const handleLoadLesson = useCallback((lesson: SavedLesson) => {
+    applySnapshot(lesson.snapshot);
+    setIsLessonsModalOpen(false);
+  }, [applySnapshot]);
+
+  const handleDeleteLesson = useCallback((id: string) => {
+    setLessons(deleteLesson(id));
+  }, []);
+
+  const handleRenameLesson = useCallback((id: string, name: string) => {
+    setLessons(renameLesson(id, name));
+  }, []);
 
   // Group creation & disbanding
   const handleGroupSelected = useCallback(() => {
@@ -741,6 +817,9 @@ const App: React.FC = () => {
     } else if (tool.type === 'EXPORT') {
       setIsExportOpen(true);
       setIsToolsOpen(false);
+    } else if (tool.type === 'LESSONS') {
+      setIsLessonsModalOpen(true);
+      setIsToolsOpen(false);
     } else {
       addWidget(tool.type as WidgetType);
     }
@@ -888,6 +967,7 @@ const App: React.FC = () => {
         zIndex={10}
         drawTool={drawTool}
         drawFilled={drawFilled}
+        onChange={scheduleAutosave}
       />
 
       {/* Marquee Drag Selection Box */}
@@ -1070,12 +1150,23 @@ const App: React.FC = () => {
       </div>
 
       {/* Export Whiteboard Modal */}
-      <ExportModal 
+      <ExportModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
         whiteboardElement={whiteboardRef.current}
         widgets={widgets}
         isDarkMode={isDarkMode}
+      />
+
+      {/* Lessons: save / load whiteboard */}
+      <LessonsModal
+        isOpen={isLessonsModalOpen}
+        onClose={() => setIsLessonsModalOpen(false)}
+        lessons={lessons}
+        onSave={handleSaveLesson}
+        onLoad={handleLoadLesson}
+        onDelete={handleDeleteLesson}
+        onRename={handleRenameLesson}
       />
     </div>
   );

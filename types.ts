@@ -95,3 +95,19 @@ export interface BackgroundConfig {
   label: string;
   className: string;
 }
+
+export interface LessonSnapshot {
+  widgets: WidgetInstance[];
+  groups: WidgetGroup[];
+  background: BackgroundType;
+  transparentWidgets: Record<string, boolean>;
+  topZ: number;
+  drawingImage?: string | null;
+}
+
+export interface SavedLesson {
+  id: string;
+  name: string;
+  savedAt: string;
+  snapshot: LessonSnapshot;
+}

@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } f
 
 export interface DrawingCanvasHandle {
   clear: () => void;
+  exportImage: () => string | null;
+  loadImage: (dataUrl: string | null) => void;
 }
 
 interface DrawingCanvasProps {
@@ -12,16 +14,18 @@ interface DrawingCanvasProps {
   zIndex: number;
   drawTool: 'PENCIL' | 'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'TRIANGLE';
   drawFilled: boolean;
+  onChange?: () => void;
 }
 
-export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(({ 
-  isDrawingMode, 
-  color, 
-  lineWidth, 
+export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(({
+  isDrawingMode,
+  color,
+  lineWidth,
   isEraser,
   zIndex,
   drawTool,
-  drawFilled
+  drawFilled,
+  onChange
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -30,7 +34,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const startYRef = useRef(0);
   const savedImageDataRef = useRef<ImageData | null>(null);
 
-  // Expose clear method to parent
+  // Expose imperative controls to parent (clear, and export/import for save/load lesson)
   useImperativeHandle(ref, () => ({
     clear: () => {
       const canvas = canvasRef.current;
@@ -38,6 +42,35 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       if (canvas && ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
+      onChange?.();
+    },
+    exportImage: () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      return canvas.toDataURL('image/png');
+    },
+    loadImage: (dataUrl: string | null) => {
+      const canvas = canvasRef.current;
+      const ctx = contextRef.current;
+      if (!canvas || !ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        const c = canvasRef.current;
+        const context = contextRef.current;
+        if (!c || !context) return;
+        // Draw in raw pixel space (ignore the devicePixelRatio scale used for
+        // pointer drawing) so the saved image maps back onto the full canvas.
+        context.save();
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.drawImage(img, 0, 0, c.width, c.height);
+        context.restore();
+      };
+      img.onerror = () => {
+        console.warn('Kunde inte läsa in sparad ritning.');
+      };
+      img.src = dataUrl;
     }
   }));
 
@@ -183,6 +216,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const endDrawing = () => {
     if (!contextRef.current) return;
     contextRef.current.closePath();
+    if (isPressed) onChange?.();
     setIsPressed(false);
     savedImageDataRef.current = null;
   };
