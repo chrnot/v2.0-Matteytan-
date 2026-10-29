@@ -61,13 +61,31 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     }
 
     const handleResize = () => {
-      // Logic for saving content during resize could be added here, 
-      // but simple clear/resize for now
+      if (!canvas || !ctx) return;
+      // Copy existing canvas content before resizing
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) {
+        tempCtx.drawImage(canvas, 0, 0);
+      }
+
       canvas.width = window.innerWidth * window.devicePixelRatio;
       canvas.height = window.innerHeight * window.devicePixelRatio;
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
-      if (ctx) ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Restore previously drawn content
+      if (tempCtx) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(tempCanvas, 0, 0);
+        ctx.restore();
+      }
     };
 
     window.addEventListener('resize', handleResize);

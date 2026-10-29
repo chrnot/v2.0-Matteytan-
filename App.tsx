@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useRef, Suspense, lazy, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Toolbar } from './components/Toolbar';
 import { WidgetWrapper } from './components/WidgetWrapper';
 import { Logo } from './components/Logo';
-import { WidgetType, WidgetInstance, WidgetGroup, BackgroundType, BackgroundConfig } from './types';
+import { WidgetType, WidgetInstance, WidgetGroup, WhiteboardSnapshot, BackgroundType, BackgroundConfig } from './types';
 import { Icons } from './components/icons';
 import { DrawingCanvas, DrawingCanvasHandle } from './components/DrawingCanvas';
 import { WidgetGroupFrame } from './components/WidgetGroupFrame';
@@ -124,7 +124,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
     title: 'Dagens Tal', 
     component: NumberDayWidget, 
     size: (m: boolean, sw: number, sh: number) => ({ w: clamp(m ? 380 : 450, sw * 0.95), h: clamp(m ? 700 : 750, sh * 0.85) }),
-    category: [],
+    category: [MathArea.TAL],
     subCategory: MathSubArea.RELATIONS,
     difficulty: Difficulty.CONCRETIZING,
   },
@@ -331,6 +331,7 @@ const WIDGET_CONFIG: Record<WidgetType, {
 
 const EXTRA_TOOLS = [
   { type: 'DRAWING', icon: Icons.Pencil, label: 'Rita' },
+  { type: 'UNDO', icon: Icons.Undo, label: 'Ångra (Ctrl+Z)' },
   { type: 'EXPORT', icon: Icons.Download, label: 'Exportera PNG' },
   { type: WidgetType.NOTE, icon: Icons.Note, label: 'Anteckning' },
   { type: WidgetType.RULER, icon: Icons.Ruler, label: 'Linjal' },
@@ -351,6 +352,13 @@ const App: React.FC = () => {
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isDraggingMarqueeRef = useRef(false);
 
+  // Undo & Redo History Stack
+  const [undoStack, setUndoStack] = useState<WhiteboardSnapshot[]>([]);
+  const [redoStack, setRedoStack] = useState<WhiteboardSnapshot[]>([]);
+  const [undoToast, setUndoToast] = useState<{ message: string; visible: boolean } | null>(null);
+  const undoToastTimeoutRef = useRef<any>(null);
+  const beforeInteractionSnapshotRef = useRef<WhiteboardSnapshot | null>(null);
+
   const [background, setBackground] = useState<BackgroundType>('GRID');
   const [topZ, setTopZ] = useState(150); 
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -369,6 +377,29 @@ const App: React.FC = () => {
   const [transparentWidgets, setTransparentWidgets] = useState<Record<string, boolean>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isArrangeGroupOpen, setIsArrangeGroupOpen] = useState(false);
+  const arrangeMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isArrangeGroupOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (arrangeMenuRef.current && !arrangeMenuRef.current.contains(e.target as Node)) {
+        setIsArrangeGroupOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsArrangeGroupOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isArrangeGroupOpen]);
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('matteytan-theme');
     return saved ? saved === 'dark' : false;
@@ -384,9 +415,75 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Snapshot helpers
+  const captureSnapshot = useCallback((actionName?: string): WhiteboardSnapshot => {
+    return {
+      widgets: widgets.map(w => ({ ...w })),
+      groups: groups.map(g => ({ ...g })),
+      transparentWidgets: { ...transparentWidgets },
+      actionName,
+      timestamp: Date.now(),
+    };
+  }, [widgets, groups, transparentWidgets]);
+
+  const pushSnapshotToUndo = useCallback((snapshot: WhiteboardSnapshot) => {
+    setUndoStack(prev => {
+      const next = [...prev, snapshot];
+      if (next.length > 50) return next.slice(next.length - 50);
+      return next;
+    });
+    setRedoStack([]);
+  }, []);
+
+  const showUndoFeedback = useCallback((message: string) => {
+    if (undoToastTimeoutRef.current) clearTimeout(undoToastTimeoutRef.current);
+    setUndoToast({ message, visible: true });
+    undoToastTimeoutRef.current = setTimeout(() => {
+      setUndoToast(null);
+    }, 2200);
+  }, []);
+
+  // Undo / Redo executions
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+
+    const currentSnapshot = captureSnapshot('Nuvarande');
+    const prevSnapshot = undoStack[undoStack.length - 1];
+    const newUndoStack = undoStack.slice(0, -1);
+
+    setRedoStack(prev => [...prev, currentSnapshot]);
+    setUndoStack(newUndoStack);
+
+    setWidgets(prevSnapshot.widgets.map(w => ({ ...w })));
+    setGroups(prevSnapshot.groups.map(g => ({ ...g })));
+    setTransparentWidgets({ ...prevSnapshot.transparentWidgets });
+    setSelectedWidgetIds([]);
+
+    showUndoFeedback(prevSnapshot.actionName ? `Ångrade: ${prevSnapshot.actionName}` : 'Åtgärd ångrad');
+  }, [undoStack, captureSnapshot, showUndoFeedback]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+
+    const currentSnapshot = captureSnapshot('Nuvarande');
+    const nextSnapshot = redoStack[redoStack.length - 1];
+    const newRedoStack = redoStack.slice(0, -1);
+
+    setUndoStack(prev => [...prev, currentSnapshot]);
+    setRedoStack(newRedoStack);
+
+    setWidgets(nextSnapshot.widgets.map(w => ({ ...w })));
+    setGroups(nextSnapshot.groups.map(g => ({ ...g })));
+    setTransparentWidgets({ ...nextSnapshot.transparentWidgets });
+    setSelectedWidgetIds([]);
+
+    showUndoFeedback(nextSnapshot.actionName ? `Gjorde om: ${nextSnapshot.actionName}` : 'Åtgärd återställd');
+  }, [redoStack, captureSnapshot, showUndoFeedback]);
+
   // Group creation & disbanding
   const handleGroupSelected = useCallback(() => {
     if (selectedWidgetIds.length < 2) return;
+    pushSnapshotToUndo(captureSnapshot('Gruppera widgetar'));
     const newGroupId = `group-${Date.now()}`;
     const groupNumber = groups.length + 1;
     const colorPalette = ['#4f46e5', '#059669', '#d97706', '#db2777', '#0891b2', '#7c3aed'];
@@ -401,26 +498,46 @@ const App: React.FC = () => {
     setGroups(prev => [...prev, newGroup]);
     setWidgets(prev => prev.map(w => selectedWidgetIds.includes(w.id) ? { ...w, groupId: newGroupId } : w));
     setSelectedWidgetIds([]);
-  }, [selectedWidgetIds, groups]);
+  }, [selectedWidgetIds, groups, captureSnapshot, pushSnapshotToUndo]);
 
   const handleUngroup = useCallback((groupId: string) => {
+    pushSnapshotToUndo(captureSnapshot('Avgruppera'));
     setWidgets(prev => prev.map(w => w.groupId === groupId ? { ...w, groupId: undefined } : w));
     setGroups(prev => prev.filter(g => g.id !== groupId));
-  }, []);
+  }, [captureSnapshot, pushSnapshotToUndo]);
 
   const handleUngroupSelected = useCallback(() => {
     const selectedWidgets = widgets.filter(w => selectedWidgetIds.includes(w.id));
     const targetGroupIds = Array.from(new Set(selectedWidgets.map(w => w.groupId).filter(Boolean))) as string[];
     
     if (targetGroupIds.length === 0) return;
-
+    pushSnapshotToUndo(captureSnapshot('Avgruppera'));
     setWidgets(prev => prev.map(w => (w.groupId && targetGroupIds.includes(w.groupId)) ? { ...w, groupId: undefined } : w));
     setGroups(prev => prev.filter(g => !targetGroupIds.includes(g.id)));
-  }, [widgets, selectedWidgetIds]);
+  }, [widgets, selectedWidgetIds, captureSnapshot, pushSnapshotToUndo]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      const activeEl = document.activeElement;
+      const isInputActive = activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        (activeEl as HTMLElement).isContentEditable
+      );
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        if (isInputActive) return;
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        if (isInputActive) return;
+        e.preventDefault();
+        handleRedo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsSearchOpen(true);
       } else if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'e')) {
@@ -439,13 +556,14 @@ const App: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleGroupSelected, handleUngroupSelected]);
+  }, [handleUndo, handleRedo, handleGroupSelected, handleUngroupSelected]);
 
   const addWidget = useCallback((type: WidgetType) => {
+    const config = WIDGET_CONFIG[type];
+    pushSnapshotToUndo(captureSnapshot(`Lägg till ${config.title}`));
     const sw = window.innerWidth;
     const sh = window.innerHeight;
     const isMobile = sw < 768;
-    const config = WIDGET_CONFIG[type];
     const size = config.size(isMobile, sw, sh);
     const id = `${type}-${Date.now()}`;
     
@@ -468,17 +586,20 @@ const App: React.FC = () => {
     });
     setIsToolsOpen(false);
     setIsSidebarOpen(false);
-  }, []);
+  }, [captureSnapshot, pushSnapshotToUndo]);
 
   const removeWidget = useCallback((id: string) => {
+    const target = widgets.find(w => w.id === id);
+    const title = target ? (WIDGET_CONFIG[target.type]?.title || 'Widget') : 'Widget';
+    pushSnapshotToUndo(captureSnapshot(`Ta bort ${title}`));
     setWidgets(prev => {
-      const target = prev.find(w => w.id === id);
+      const toRemove = prev.find(w => w.id === id);
       const remaining = prev.filter(w => w.id !== id);
-      if (target?.groupId) {
-        const inGroup = remaining.filter(w => w.groupId === target.groupId);
+      if (toRemove?.groupId) {
+        const inGroup = remaining.filter(w => w.groupId === toRemove.groupId);
         if (inGroup.length <= 1) {
-          setGroups(gPrev => gPrev.filter(g => g.id !== target.groupId));
-          return remaining.map(w => w.groupId === target.groupId ? { ...w, groupId: undefined } : w);
+          setGroups(gPrev => gPrev.filter(g => g.id !== toRemove.groupId));
+          return remaining.map(w => w.groupId === toRemove.groupId ? { ...w, groupId: undefined } : w);
         }
       }
       return remaining;
@@ -489,7 +610,7 @@ const App: React.FC = () => {
         return next;
     });
     setSelectedWidgetIds(prev => prev.filter(wid => wid !== id));
-  }, []);
+  }, [widgets, captureSnapshot, pushSnapshotToUndo]);
 
   const bringToFront = useCallback((id: string) => {
     setTopZ(prevZ => {
@@ -513,13 +634,39 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const handleWidgetDragStart = useCallback((id: string) => {
+    const target = widgets.find(w => w.id === id);
+    const title = target ? (WIDGET_CONFIG[target.type]?.title || 'Widget') : 'Widget';
+    beforeInteractionSnapshotRef.current = captureSnapshot(`Flytta ${title}`);
+  }, [widgets, captureSnapshot]);
+
   const updatePosition = useCallback((id: string, x: number, y: number) => {
+    if (beforeInteractionSnapshotRef.current) {
+      const prevW = beforeInteractionSnapshotRef.current.widgets.find(w => w.id === id);
+      if (prevW && (prevW.x !== x || prevW.y !== y)) {
+        pushSnapshotToUndo(beforeInteractionSnapshotRef.current);
+      }
+      beforeInteractionSnapshotRef.current = null;
+    }
     setWidgets(prev => prev.map(w => w.id === id ? { ...w, x, y } : w));
-  }, []);
+  }, [pushSnapshotToUndo]);
+
+  const handleWidgetResizeStart = useCallback((id: string) => {
+    const target = widgets.find(w => w.id === id);
+    const title = target ? (WIDGET_CONFIG[target.type]?.title || 'Widget') : 'Widget';
+    beforeInteractionSnapshotRef.current = captureSnapshot(`Ändra storlek (${title})`);
+  }, [widgets, captureSnapshot]);
 
   const updateSize = useCallback((id: string, width: number, height: number) => {
+    if (beforeInteractionSnapshotRef.current) {
+      const prevW = beforeInteractionSnapshotRef.current.widgets.find(w => w.id === id);
+      if (prevW && (prevW.width !== width || prevW.height !== height)) {
+        pushSnapshotToUndo(beforeInteractionSnapshotRef.current);
+      }
+      beforeInteractionSnapshotRef.current = null;
+    }
     setWidgets(prev => prev.map(w => w.id === id ? { ...w, width, height } : w));
-  }, []);
+  }, [pushSnapshotToUndo]);
   
   const toggleTransparency = useCallback((id: string, isTrans: boolean) => {
       setTransparentWidgets(prev => ({ ...prev, [id]: isTrans }));
@@ -541,14 +688,30 @@ const App: React.FC = () => {
   }, []);
 
   // Group movement: moving group via frame or moving member widget
+  const handleMoveGroupStart = useCallback((groupId: string) => {
+    const grp = groups.find(g => g.id === groupId);
+    beforeInteractionSnapshotRef.current = captureSnapshot(`Flytta ${grp?.name || 'grupp'}`);
+  }, [groups, captureSnapshot]);
+
   const handleMoveGroup = useCallback((groupId: string, deltaX: number, deltaY: number, finished: boolean) => {
     if (finished) {
       setIsGroupInteracting(false);
+      if (beforeInteractionSnapshotRef.current) {
+        const moved = widgets.some(w => {
+          if (w.groupId !== groupId) return false;
+          const orig = beforeInteractionSnapshotRef.current?.widgets.find(ow => ow.id === w.id);
+          return orig && (orig.x !== w.x || orig.y !== w.y);
+        });
+        if (moved) {
+          pushSnapshotToUndo(beforeInteractionSnapshotRef.current);
+        }
+        beforeInteractionSnapshotRef.current = null;
+      }
       return;
     }
     setIsGroupInteracting(true);
     setWidgets(prev => prev.map(w => w.groupId === groupId ? { ...w, x: w.x + deltaX, y: w.y + deltaY } : w));
-  }, []);
+  }, [widgets, pushSnapshotToUndo]);
 
   const handleWidgetDragDelta = useCallback((id: string, deltaX: number, deltaY: number, finished: boolean) => {
     const widget = widgets.find(w => w.id === id);
@@ -570,6 +733,11 @@ const App: React.FC = () => {
   }, [widgets]);
 
   // Group scaling
+  const handleScaleGroupStart = useCallback((groupId: string) => {
+    const grp = groups.find(g => g.id === groupId);
+    beforeInteractionSnapshotRef.current = captureSnapshot(`Skala ${grp?.name || 'grupp'}`);
+  }, [groups, captureSnapshot]);
+
   const handleScaleGroup = useCallback((
     groupId: string,
     scaleX: number,
@@ -580,6 +748,10 @@ const App: React.FC = () => {
   ) => {
     if (finished) {
       setIsGroupInteracting(false);
+      if (beforeInteractionSnapshotRef.current) {
+        pushSnapshotToUndo(beforeInteractionSnapshotRef.current);
+        beforeInteractionSnapshotRef.current = null;
+      }
       return;
     }
     setIsGroupInteracting(true);
@@ -598,9 +770,10 @@ const App: React.FC = () => {
         height: Math.round(newH)
       };
     }));
-  }, []);
+  }, [pushSnapshotToUndo]);
 
   const handleQuickScale = useCallback((groupId: string, factor: number) => {
+    pushSnapshotToUndo(captureSnapshot(factor > 1 ? 'Förstora grupp' : 'Förminska grupp'));
     setWidgets(prev => {
       const groupWidgets = prev.filter(w => w.groupId === groupId);
       if (groupWidgets.length === 0) return prev;
@@ -621,10 +794,11 @@ const App: React.FC = () => {
         };
       });
     });
-  }, []);
+  }, [captureSnapshot, pushSnapshotToUndo]);
 
   // Canvas marquee selection handlers
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (isToolsOpen) setIsToolsOpen(false);
     if (isDrawingMode) return;
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('input') || target.closest('textarea') || target.closest('.widget-shadow')) {
@@ -675,6 +849,8 @@ const App: React.FC = () => {
   };
 
   const arrangeWidgets = useCallback(() => {
+    if (widgets.length === 0) return;
+    pushSnapshotToUndo(captureSnapshot('Ordna fönster'));
     setWidgets(prevWidgets => {
         if (prevWidgets.length === 0) return prevWidgets;
 
@@ -741,10 +917,23 @@ const App: React.FC = () => {
     } else if (tool.type === 'EXPORT') {
       setIsExportOpen(true);
       setIsToolsOpen(false);
+    } else if (tool.type === 'UNDO') {
+      handleUndo();
+      setIsToolsOpen(false);
     } else {
       addWidget(tool.type as WidgetType);
     }
-  }, [addWidget]);
+  }, [addWidget, handleUndo]);
+
+  const handleGroupAction = useCallback(() => {
+    if (selectedWidgetIds.length >= 2) {
+      handleGroupSelected();
+    } else if (selectedWidgetIds.length > 0) {
+      clearSelection();
+    } else {
+      selectAllWidgets();
+    }
+  }, [selectedWidgetIds.length, handleGroupSelected, clearSelection, selectAllWidgets]);
 
   const clearDrawings = useCallback(() => {
     drawingCanvasRef.current?.clear();
@@ -770,112 +959,210 @@ const App: React.FC = () => {
           isDarkMode={isDarkMode}
           onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
           onOpenSearch={() => setIsSearchOpen(true)}
+          isToolsOpen={isToolsOpen}
+          onToggleTools={() => setIsToolsOpen(prev => !prev)}
+          onCloseTools={() => setIsToolsOpen(false)}
+          onToolClick={handleToolClick}
+          extraTools={EXTRA_TOOLS}
+          backgrounds={BACKGROUNDS}
+          currentBackground={background}
+          onSetBackground={setBackground}
         />
       </div>
 
-      {/* Top Controls Bar */}
-      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[2000] flex items-start gap-2 export-ignore" data-export-ignore="true">
-         
-         {/* Grouping / Selection Button */}
-         <button 
-            onClick={selectedWidgetIds.length >= 2 ? handleGroupSelected : () => {
-              if (selectedWidgetIds.length > 0) {
-                clearSelection();
-              } else {
-                selectAllWidgets();
-              }
-            }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-full shadow-lg font-bold text-xs sm:text-sm transition-all hover:scale-105 active:scale-95 ${
-              selectedWidgetIds.length >= 2
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white ring-2 ring-blue-300'
-                : selectedWidgetIds.length > 0
-                  ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300'
-                  : 'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:text-blue-600'
-            }`}
-            title={
-              selectedWidgetIds.length >= 2
-                ? `Gruppera ${selectedWidgetIds.length} markerade widgetar`
-                : selectedWidgetIds.length > 0
-                  ? 'Avmarkera alla'
-                  : 'Markera alla widgetar'
-            }
-         >
-             <Icons.Group size={16} />
-             <span className="hidden md:inline">
-               {selectedWidgetIds.length >= 2 
-                 ? `Gruppera (${selectedWidgetIds.length})` 
-                 : selectedWidgetIds.length > 0 
-                   ? `Markerade (${selectedWidgetIds.length})` 
-                   : 'Gruppera'}
-             </span>
-         </button>
+      {/* Top Controls Bar - Ordna/Gruppera, Ångra, Exportera & Ljust/Mörkt (endast ikoner med hover-text) */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[2000] flex items-center gap-2 export-ignore" data-export-ignore="true">
+         {/* Ordna & Gruppera */}
+         <div className="relative group" ref={arrangeMenuRef}>
+           <button 
+              onClick={() => setIsArrangeGroupOpen(prev => !prev)}
+              className={`relative p-2.5 sm:p-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border transition-all flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 ${
+                isArrangeGroupOpen 
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 ring-2 ring-indigo-500/30' 
+                  : selectedWidgetIds.length > 0
+                    ? 'border-indigo-400/80 text-indigo-600 dark:text-indigo-400'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-indigo-500 dark:hover:text-indigo-400'
+              }`}
+              title="Ordna och gruppera"
+              aria-label="Ordna och gruppera"
+           >
+              <Icons.Grid size={18} className={isArrangeGroupOpen || selectedWidgetIds.length > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 group-hover:text-indigo-500 dark:group-hover:text-indigo-400'} />
+              {selectedWidgetIds.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-[10px] font-bold text-white flex items-center justify-center shadow-xs">
+                  {selectedWidgetIds.length}
+                </span>
+              )}
+           </button>
+           
+           {!isArrangeGroupOpen && (
+             <div className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 px-2.5 py-0.5 rounded-md bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 text-xs font-semibold shadow-lg whitespace-nowrap z-50">
+               Ordna och gruppera
+             </div>
+           )}
 
-         <button 
-            onClick={arrangeWidgets}
-            disabled={widgets.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all font-bold text-xs sm:text-sm disabled:opacity-30 disabled:hover:scale-100"
-            title="Ordna fönster i rutnät"
-         >
-             <span className="text-lg leading-none">🧩</span> <span className="hidden md:inline uppercase tracking-widest">Ordna</span>
-         </button>
+           {/* Dropdown Meny */}
+           {isArrangeGroupOpen && (
+             <div className="absolute right-0 sm:right-auto sm:left-0 top-14 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-3 z-[2200] flex flex-col gap-3">
+               <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                 <div className="flex items-center gap-2">
+                   <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                     <Icons.Grid size={14} />
+                   </div>
+                   <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">Ordna & Gruppera</span>
+                 </div>
+                 <button 
+                   onClick={() => setIsArrangeGroupOpen(false)}
+                   className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                   title="Stäng"
+                 >
+                   <Icons.X size={14} />
+                 </button>
+               </div>
 
-         {/* Export Whiteboard Button */}
-         <button 
-            onClick={() => setIsExportOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all font-bold text-xs sm:text-sm"
-            title="Exportera whiteboard som PNG-bild (Ctrl+S / Cmd+S)"
-         >
-             <Icons.Download size={16} /> <span className="hidden md:inline uppercase tracking-widest">Exportera</span>
-         </button>
+               {/* 1. Ordna fönster i rutnät */}
+               <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+                 <div className="flex items-center justify-between">
+                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
+                     <Icons.Grid size={12} className="text-amber-500" /> Ordna fönster
+                   </span>
+                   <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                     {widgets.length} {widgets.length === 1 ? 'öppet' : 'öppna'}
+                   </span>
+                 </div>
+                 <button
+                   onClick={() => {
+                     arrangeWidgets();
+                     setIsArrangeGroupOpen(false);
+                   }}
+                   disabled={widgets.length === 0}
+                   className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer active:scale-95"
+                   title="Ordna alla öppna fönster i ett jämnt rutnät på tavlan"
+                 >
+                   <Icons.Grid size={14} />
+                   <span>Ordna i rutnät</span>
+                 </button>
+               </div>
 
-         <button 
-            onClick={() => addWidget(WidgetType.NUMBER_OF_DAY)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all font-bold text-xs sm:text-sm"
-         >
-             <Icons.Calendar size={16} /> <span className="hidden md:inline">Dagens Tal</span>
-         </button>
+               {/* 2. Gruppering */}
+               <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+                 <div className="flex items-center justify-between">
+                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
+                     <Icons.Group size={12} className="text-indigo-500" /> Gruppering
+                   </span>
+                   <span className={`text-[10px] font-bold ${selectedWidgetIds.length > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                     {selectedWidgetIds.length} markerade
+                   </span>
+                 </div>
+                 <button
+                   onClick={() => {
+                     handleGroupSelected();
+                     setIsArrangeGroupOpen(false);
+                   }}
+                   disabled={selectedWidgetIds.length < 2}
+                   className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer active:scale-95"
+                   title={selectedWidgetIds.length < 2 ? 'Markera minst 2 fönster för att gruppera' : `Gruppera ${selectedWidgetIds.length} markerade fönster`}
+                 >
+                   <Icons.Link size={14} />
+                   <span>Gruppera {selectedWidgetIds.length >= 2 ? `(${selectedWidgetIds.length})` : ''}</span>
+                 </button>
 
-         <div className="relative">
-            <button 
-                onClick={() => setIsToolsOpen(!isToolsOpen)}
-                className={`flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-200 text-slate-700 hover:text-blue-600 hover:scale-105 active:scale-95 transition-all font-bold text-xs sm:text-sm ${isToolsOpen ? 'ring-2 ring-blue-200 text-blue-600' : ''}`}
-            >
-                <Icons.Tools size={16} /> 
-                <span className="hidden md:inline">Verktyg</span>
-                <Icons.ChevronDown size={14} className={`transition-transform duration-200 ${isToolsOpen ? 'rotate-180' : 'rotate-0'}`} />
-            </button>
+                 {widgets.some(w => selectedWidgetIds.includes(w.id) && !!w.groupId) && (
+                   <button
+                     onClick={() => {
+                       handleUngroupSelected();
+                       setIsArrangeGroupOpen(false);
+                     }}
+                     className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer active:scale-95"
+                     title="Lös upp markerad grupp"
+                   >
+                     <Icons.Unlink size={13} />
+                     <span>Lös upp grupp</span>
+                   </button>
+                 )}
 
-            {isToolsOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white/95 backdrop-blur rounded-xl shadow-xl border border-slate-200 p-1.5 flex flex-col gap-1 animate-in slide-in-from-top-2 fade-in duration-200">
-                    <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 mb-1">Funktioner</div>
-                    {EXTRA_TOOLS.map((tool) => (
-                        <button
-                            key={tool.label}
-                            onClick={() => handleToolClick(tool)}
-                            className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${tool.type === 'DRAWING' && isDrawingMode ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-100 text-slate-700 hover:text-blue-600'}`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <tool.icon size={18} />
-                                <span>{tool.label}</span>
-                            </div>
-                            {tool.type === 'DRAWING' && isDrawingMode && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>}
-                        </button>
-                    ))}
-                    
-                    <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 mt-2 mb-1">Bakgrund</div>
-                    <div className="grid grid-cols-2 gap-1 p-1">
-                        {BACKGROUNDS.map(bg => (
-                            <button 
-                                key={bg.type}
-                                onClick={() => setBackground(bg.type)}
-                                className={`px-2 py-1.5 rounded text-[10px] font-bold uppercase tracking-tighter border transition-all ${background === bg.type ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                            >
-                                {bg.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
+                 <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                   <button
+                     onClick={selectAllWidgets}
+                     disabled={widgets.length === 0 || selectedWidgetIds.length === widgets.length}
+                     className="flex-1 py-1 text-[10px] font-bold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 disabled:opacity-30 disabled:pointer-events-none transition-colors text-center cursor-pointer"
+                   >
+                     Markera alla
+                   </button>
+                   {selectedWidgetIds.length > 0 && (
+                     <button
+                       onClick={clearSelection}
+                       className="flex-1 py-1 text-[10px] font-bold text-rose-500 hover:text-rose-600 transition-colors text-center cursor-pointer"
+                     >
+                       Avmarkera
+                     </button>
+                   )}
+                 </div>
+               </div>
+             </div>
+           )}
+         </div>
+
+         {/* Ångra */}
+         <div className="relative group">
+           <button 
+              onClick={handleUndo}
+              disabled={undoStack.length === 0}
+              className="p-2.5 sm:p-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-blue-500 dark:hover:text-blue-400 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+              title="Ångra"
+              aria-label="Ångra"
+           >
+              <Icons.Undo size={18} className="text-slate-600 dark:text-slate-300 group-hover:text-blue-500 dark:group-hover:text-blue-400" />
+           </button>
+           <div className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 px-2.5 py-0.5 rounded-md bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 text-xs font-semibold shadow-lg whitespace-nowrap z-50">
+             Ångra
+           </div>
+         </div>
+
+         {/* Gör om (Redo) - visas om det finns åtgärder att återställa */}
+         {redoStack.length > 0 && (
+           <div className="relative group">
+             <button 
+                onClick={handleRedo}
+                className="p-2.5 sm:p-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-blue-500 dark:hover:text-blue-400 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+                title="Gör om"
+                aria-label="Gör om"
+             >
+                <Icons.Redo size={18} className="text-slate-600 dark:text-slate-300 group-hover:text-blue-500 dark:group-hover:text-blue-400" />
+             </button>
+             <div className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 px-2.5 py-0.5 rounded-md bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 text-xs font-semibold shadow-lg whitespace-nowrap z-50">
+               Gör om
+             </div>
+           </div>
+         )}
+
+         {/* Exportera */}
+         <div className="relative group">
+           <button 
+              onClick={() => setIsExportOpen(true)}
+              className="p-2.5 sm:p-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-emerald-500 dark:hover:text-emerald-400 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+              title="Exportera"
+              aria-label="Exportera"
+           >
+              <Icons.Download size={18} className="text-slate-600 dark:text-slate-300 group-hover:text-emerald-500 dark:group-hover:text-emerald-400" />
+           </button>
+           <div className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 px-2.5 py-0.5 rounded-md bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 text-xs font-semibold shadow-lg whitespace-nowrap z-50">
+             Exportera
+           </div>
+         </div>
+
+         {/* Ljust/mörkt */}
+         <div className="relative group">
+           <button 
+              onClick={() => setIsDarkMode(prev => !prev)}
+              className="p-2.5 sm:p-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-amber-500 dark:hover:text-amber-400 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+              title="Ljust/mörkt"
+              aria-label="Ljust/mörkt"
+           >
+              {isDarkMode ? <Icons.Sun size={18} className="text-amber-400" /> : <Icons.Moon size={18} className="text-slate-600 dark:text-slate-300" />}
+           </button>
+           <div className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 px-2.5 py-0.5 rounded-md bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 text-xs font-semibold shadow-lg whitespace-nowrap z-50">
+             Ljust/mörkt
+           </div>
          </div>
       </div>
 
@@ -903,64 +1190,80 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* Undo Toast Notification */}
+      {undoToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[3100] flex items-center gap-2 px-4 py-2 bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 rounded-full shadow-2xl backdrop-blur-md text-xs sm:text-sm font-bold animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-none export-ignore">
+          <Icons.Undo size={15} className="text-blue-400 dark:text-blue-600" />
+          <span>{undoToast.message}</span>
+        </div>
+      )}
+
       {/* Widget Group Frames */}
-      {groups.map(group => {
-        const groupWidgets = widgets.filter(w => w.groupId === group.id);
-        if (groupWidgets.length === 0) return null;
-        return (
-          <WidgetGroupFrame
-            key={group.id}
-            group={group}
-            widgets={groupWidgets}
-            onUngroup={handleUngroup}
-            onMoveGroup={handleMoveGroup}
-            onScaleGroup={handleScaleGroup}
-            onQuickScale={handleQuickScale}
-            onFocusGroup={bringGroupToFront}
-            isDarkMode={isDarkMode}
-          />
-        );
-      })}
+      <AnimatePresence>
+        {groups.map(group => {
+          const groupWidgets = widgets.filter(w => w.groupId === group.id);
+          if (groupWidgets.length === 0) return null;
+          return (
+            <WidgetGroupFrame
+              key={group.id}
+              group={group}
+              widgets={groupWidgets}
+              onUngroup={handleUngroup}
+              onMoveGroupStart={handleMoveGroupStart}
+              onMoveGroup={handleMoveGroup}
+              onScaleGroupStart={handleScaleGroupStart}
+              onScaleGroup={handleScaleGroup}
+              onQuickScale={handleQuickScale}
+              onFocusGroup={bringGroupToFront}
+              isDarkMode={isDarkMode}
+            />
+          );
+        })}
+      </AnimatePresence>
 
-      {widgets.map(widget => {
-        const config = WIDGET_CONFIG[widget.type];
-        const widgetGroup = widget.groupId ? groups.find(g => g.id === widget.groupId) : undefined;
-        const isSelected = selectedWidgetIds.includes(widget.id);
+      <AnimatePresence>
+        {widgets.map(widget => {
+          const config = WIDGET_CONFIG[widget.type];
+          const widgetGroup = widget.groupId ? groups.find(g => g.id === widget.groupId) : undefined;
+          const isSelected = selectedWidgetIds.includes(widget.id);
 
-        return (
-          <WidgetWrapper
-            key={widget.id}
-            id={widget.id}
-            title={config.title}
-            initialX={widget.x}
-            initialY={widget.y}
-            initialWidth={widget.width}
-            initialHeight={widget.height}
-            zIndex={widget.zIndex}
-            transparent={transparentWidgets[widget.id]}
-            klagSupport={config.klagSupport}
-            isSelected={isSelected}
-            groupId={widget.groupId}
-            groupName={widgetGroup?.name}
-            groupColor={widgetGroup?.color}
-            isGroupInteracting={isGroupInteracting}
-            onClose={removeWidget}
-            onFocus={bringToFront}
-            onMove={updatePosition}
-            onDragDelta={handleWidgetDragDelta}
-            onResize={updateSize}
-            onToggleSelect={toggleSelectWidget}
-          >
-            <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-slate-50 rounded-xl"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
-              <config.component 
-                id={widget.id}
-                isTransparent={transparentWidgets[widget.id] || false}
-                setTransparent={(v: boolean) => toggleTransparency(widget.id, v)}
-              />
-            </Suspense>
-          </WidgetWrapper>
-        );
-      })}
+          return (
+            <WidgetWrapper
+              key={widget.id}
+              id={widget.id}
+              title={config.title}
+              initialX={widget.x}
+              initialY={widget.y}
+              initialWidth={widget.width}
+              initialHeight={widget.height}
+              zIndex={widget.zIndex}
+              transparent={transparentWidgets[widget.id]}
+              klagSupport={config.klagSupport}
+              isSelected={isSelected}
+              groupId={widget.groupId}
+              groupName={widgetGroup?.name}
+              groupColor={widgetGroup?.color}
+              isGroupInteracting={isGroupInteracting}
+              onClose={removeWidget}
+              onFocus={bringToFront}
+              onDragStart={handleWidgetDragStart}
+              onMove={updatePosition}
+              onDragDelta={handleWidgetDragDelta}
+              onResizeStart={handleWidgetResizeStart}
+              onResize={updateSize}
+              onToggleSelect={toggleSelectWidget}
+            >
+              <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-slate-50 rounded-xl"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+                <config.component 
+                  id={widget.id}
+                  isTransparent={transparentWidgets[widget.id] || false}
+                  setTransparent={(v: boolean) => toggleTransparency(widget.id, v)}
+                />
+              </Suspense>
+            </WidgetWrapper>
+          );
+        })}
+      </AnimatePresence>
 
       {/* Selection Floating Action Bar */}
       <SelectionToolbar

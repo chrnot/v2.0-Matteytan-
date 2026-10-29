@@ -91,10 +91,16 @@ import {
   Download,
   Image,
   Camera,
-  FileDown
+  FileDown,
+  Undo,
+  Redo,
+  Target
 } from 'lucide-react';
 
 export const Icons = {
+  Target,
+  Undo,
+  Redo,
   Download,
   Image,
   Camera,

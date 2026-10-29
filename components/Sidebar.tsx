@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MathArea, WidgetType, Difficulty, MathSubArea } from '../types';
 import { MATH_AREAS } from './MathAreaConfig';
 import { Icons } from './icons';
@@ -18,8 +18,17 @@ interface SidebarProps {
   }>;
   onPiClick?: () => void;
   isDarkMode: boolean;
-  onToggleDarkMode: () => void;
+  onToggleDarkMode?: () => void;
   onOpenSearch: () => void;
+  isToolsOpen?: boolean;
+  onToggleTools?: () => void;
+  onCloseTools?: () => void;
+  onToolClick?: (tool: any) => void;
+  extraTools?: { type: string; icon: any; label: string }[];
+  backgrounds?: { type: any; label: string; className?: string }[];
+  currentBackground?: any;
+  onSetBackground?: (bg: any) => void;
+  isDrawingMode?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -30,7 +39,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onPiClick, 
   isDarkMode,
   onToggleDarkMode,
-  onOpenSearch
+  onOpenSearch,
+  isToolsOpen = false,
+  onToggleTools,
+  onCloseTools,
+  onToolClick,
+  extraTools = [],
+  backgrounds = [],
+  currentBackground,
+  onSetBackground,
+  isDrawingMode = false
 }) => {
   const [activeArea, setActiveArea] = useState<MathArea | null>(null);
 
@@ -79,6 +97,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
+        {/* Sökverktyget: ovanför "Taluppfattning och tals användning" men under logotypen */}
+        <div className={`p-2 border-b border-[var(--sidebar-border)]/60 ${isOpen ? '' : 'flex justify-center'}`}>
+          <button
+            onClick={onOpenSearch}
+            className={`flex items-center rounded-xl transition-all group border ${
+              isOpen ? 'w-full gap-3 p-2.5' : 'justify-center p-2.5'
+            } ${
+              isDarkMode
+                ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700/60 text-slate-300 hover:text-white'
+                : 'bg-white hover:bg-slate-50 border-slate-200/90 text-slate-700 hover:text-blue-600 shadow-2xs hover:shadow-xs'
+            }`}
+            title="Sök verktyg (Ctrl+K / ⌘K)"
+          >
+            <div className={`p-1.5 rounded-lg transition-colors ${
+              isDarkMode ? 'bg-slate-700 text-blue-400 group-hover:bg-slate-600' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'
+            }`}>
+              <Icons.Search size={18} />
+            </div>
+            {isOpen && (
+              <div className="flex-1 flex items-center justify-between text-left overflow-hidden">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 truncate">Sök verktyg</span>
+                <kbd className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded border ml-1 shrink-0 ${
+                  isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-400'
+                }`}>⌘K</kbd>
+              </div>
+            )}
+          </button>
+        </div>
+
         {/* Categories */}
         <div className="flex-1 overflow-y-auto no-scrollbar py-2 px-2 space-y-1">
           {MATH_AREAS.map((area) => (
@@ -112,8 +159,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </div>
 
-        {/* Footer Settings / Mattelab / Dark Mode toggle */}
-        <div className="p-4 border-t border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/30 mt-auto flex flex-col gap-4">
+        {/* Footer Settings / Mattelab */}
+        <div className="p-3 sm:p-4 border-t border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/30 mt-auto flex flex-col gap-2.5 overflow-y-auto max-h-[55vh] no-scrollbar">
           <a
             href="https://matteytan.se/mattelab"
             target="_blank"
@@ -164,37 +211,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isOpen && <Icons.Maximize size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-y-1 group-hover:translate-y-0" />}
           </a>
 
-          <div className={`flex items-center gap-3 ${isOpen ? 'justify-between pb-2' : 'justify-center pb-2'}`}>
-            {isOpen && (
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Ljust / Mörkt
-              </span>
-            )}
-            <div className="flex items-center gap-1.5">
-              <button 
-                onClick={onOpenSearch}
-                className={`p-2 rounded-xl transition-all shadow-sm ${
-                  isDarkMode 
-                    ? 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700' 
-                    : 'bg-white text-slate-500 hover:text-blue-600 hover:bg-slate-100 border border-slate-200'
-                }`}
-                title="Sök verktyg"
-              >
-                <Icons.Search size={20} />
-              </button>
-              <button 
-                onClick={onToggleDarkMode}
-                className={`p-2 rounded-xl transition-all shadow-sm ${
-                  isDarkMode 
-                    ? 'bg-slate-800 text-amber-400 hover:bg-slate-700' 
-                    : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
-                }`}
-                title={isDarkMode ? 'Växla till ljust läge' : 'Växla till mörkt läge'}
-              >
-                {isDarkMode ? <Icons.Moon size={20} /> : <Icons.Sun size={20} />}
-              </button>
+          {/* Verktyg Button (swapped with Ljust/Mörkt) */}
+          <button
+            onClick={() => {
+              onToggleTools?.();
+              if (activeArea) setActiveArea(null);
+            }}
+            className={`flex items-center rounded-xl transition-all group ${
+              isOpen ? 'w-full gap-3 p-3' : 'justify-center p-3'
+            } ${
+              isToolsOpen
+                ? 'bg-blue-600 text-white shadow-lg'
+                : isDarkMode 
+                  ? 'hover:bg-slate-800 text-slate-300 bg-slate-800/40 border border-slate-700/50' 
+                  : 'hover:bg-white text-slate-700 bg-white/70 border border-slate-200'
+            }`}
+            title="Verktyg (Rita, bakgrund, m.m.)"
+          >
+            <div className={`p-2 rounded-lg transition-colors ${
+              isToolsOpen
+                ? 'bg-white/20 text-white'
+                : isDarkMode ? 'bg-blue-950/50 text-blue-400 group-hover:bg-blue-900/60' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'
+            }`}>
+              <Icons.Tools size={20} />
             </div>
-          </div>
+            {isOpen && (
+              <div className="flex-1 text-left">
+                <div className="text-xs font-black uppercase tracking-widest leading-none mb-0.5">Verktyg</div>
+                <div className={`text-[9px] line-clamp-1 ${isToolsOpen ? 'text-blue-100' : 'text-slate-400'}`}>
+                  Rita, bakgrund m.m.
+                </div>
+              </div>
+            )}
+            {isOpen && (
+              <Icons.ChevronRight size={14} className={`transition-transform duration-200 ${isToolsOpen ? 'rotate-90' : ''}`} />
+            )}
+          </button>
         </div>
       </motion.div>
 
@@ -275,6 +327,87 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ))}
                 </div>
               ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Tools & Background Menu */}
+      <AnimatePresence>
+        {isToolsOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="ml-2 mb-4 self-end w-64 bg-[var(--sidebar-bg)] backdrop-blur-2xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] border border-[var(--sidebar-border)] overflow-hidden flex flex-col transition-colors duration-300 z-[3200]"
+          >
+            <div className="p-3 border-b border-[var(--sidebar-border)] flex items-center justify-between bg-[var(--sidebar-hover)]/30">
+              <div className="flex items-center gap-2">
+                <div className="text-blue-600">
+                  <Icons.Tools size={18} />
+                </div>
+                <h3 className={`font-black uppercase tracking-widest text-xs ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  Verktyg & Bakgrund
+                </h3>
+              </div>
+              <button 
+                onClick={onCloseTools}
+                className="p-1 hover:bg-[var(--sidebar-hover)] rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <Icons.Close size={16} />
+              </button>
+            </div>
+
+            <div className="p-2 space-y-1 max-h-[60vh] overflow-y-auto no-scrollbar">
+              <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">Funktioner</div>
+              {extraTools.map((tool) => (
+                <button
+                  key={tool.label}
+                  onClick={() => {
+                    onToolClick?.(tool);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all text-left ${
+                    tool.type === 'DRAWING' && isDrawingMode 
+                      ? 'bg-blue-600 text-white shadow-md' 
+                      : isDarkMode 
+                        ? 'hover:bg-slate-800 text-slate-300 hover:text-white' 
+                        : 'hover:bg-slate-100 text-slate-700 hover:text-blue-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <tool.icon size={18} />
+                    <span>{tool.label}</span>
+                  </div>
+                  {tool.type === 'DRAWING' && isDrawingMode && (
+                    <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  )}
+                </button>
+              ))}
+
+              {backgrounds.length > 0 && (
+                <>
+                  <div className="px-2 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest border-t border-[var(--sidebar-border)] mt-2">
+                    Bakgrund
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 p-1">
+                    {backgrounds.map(bg => (
+                      <button 
+                        key={bg.type}
+                        onClick={() => onSetBackground?.(bg.type)}
+                        className={`px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                          currentBackground === bg.type 
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
+                            : isDarkMode
+                              ? 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-white'
+                        }`}
+                      >
+                        {bg.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

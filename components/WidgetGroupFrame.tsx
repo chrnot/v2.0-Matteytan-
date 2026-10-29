@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, memo } from 'react';
+import { motion } from 'framer-motion';
 import { WidgetGroup, WidgetInstance } from '../types';
 import { Icons } from './icons';
 
@@ -14,7 +15,9 @@ interface WidgetGroupFrameProps {
   group: WidgetGroup;
   widgets: WidgetInstance[];
   onUngroup: (groupId: string) => void;
+  onMoveGroupStart?: (groupId: string) => void;
   onMoveGroup: (groupId: string, deltaX: number, deltaY: number, finished: boolean) => void;
+  onScaleGroupStart?: (groupId: string) => void;
   onScaleGroup: (
     groupId: string, 
     scaleX: number, 
@@ -32,7 +35,9 @@ export const WidgetGroupFrame: React.FC<WidgetGroupFrameProps> = memo(({
   group,
   widgets,
   onUngroup,
+  onMoveGroupStart,
   onMoveGroup,
+  onScaleGroupStart,
   onScaleGroup,
   onQuickScale,
   onFocusGroup,
@@ -73,6 +78,7 @@ export const WidgetGroupFrame: React.FC<WidgetGroupFrameProps> = memo(({
   // --- GROUP DRAGGING LOGIC ---
   const handleDragStart = (clientX: number, clientY: number) => {
     onFocusGroup(group.id);
+    onMoveGroupStart?.(group.id);
     setIsDragging(true);
     dragStartRef.current = { x: clientX, y: clientY };
   };
@@ -118,6 +124,7 @@ export const WidgetGroupFrame: React.FC<WidgetGroupFrameProps> = memo(({
   // --- GROUP RESIZING LOGIC ---
   const handleResizeStart = (clientX: number, clientY: number) => {
     onFocusGroup(group.id);
+    onScaleGroupStart?.(group.id);
     setIsResizing(true);
     resizeStartRef.current = {
       pointerX: clientX,
@@ -186,8 +193,12 @@ export const WidgetGroupFrame: React.FC<WidgetGroupFrameProps> = memo(({
   return (
     <>
       {/* 1. Behind-widgets Frame Box: subtle background & outline */}
-      <div
+      <motion.div
         className="fixed rounded-2xl pointer-events-none transition-all duration-150"
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         style={{
           left: frameLeft,
           top: frameTop,
@@ -201,8 +212,12 @@ export const WidgetGroupFrame: React.FC<WidgetGroupFrameProps> = memo(({
       />
 
       {/* 2. Top Group Control Bar (Always on top of widgets) */}
-      <div
+      <motion.div
         className="fixed flex items-center justify-between pointer-events-auto select-none"
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         style={{
           left: frameLeft,
           top: frameTop + 2,
@@ -278,11 +293,15 @@ export const WidgetGroupFrame: React.FC<WidgetGroupFrameProps> = memo(({
             <span>Avgruppera</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* 3. Bottom-Right Corner Scaling Handle */}
-      <div
+      <motion.div
         className="fixed pointer-events-auto touch-none select-none z-[2100]"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         style={{
           left: frameLeft + frameWidth - 16,
           top: frameTop + frameHeight - 16,
@@ -309,7 +328,7 @@ export const WidgetGroupFrame: React.FC<WidgetGroupFrameProps> = memo(({
         >
           <Icons.Maximize size={15} className="rotate-90" />
         </div>
-      </div>
+      </motion.div>
     </>
   );
 });

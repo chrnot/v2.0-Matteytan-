@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '../icons';
 
 type PrefixPower = 12 | 9 | 6 | 3 | 2 | 1 | 0 | -1 | -2 | -3 | -6 | -9;

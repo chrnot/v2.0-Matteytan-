@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '../icons';
+import { playSoundEffect } from '../../src/utils/audio';
 
 type UnitType = 'LENGTH' | 'WEIGHT' | 'VOLUME';
 type Dimension = 1 | 2 | 3;
@@ -46,12 +47,6 @@ export const UnitStaircaseWidget: React.FC = () => {
   const [feedback, setFeedback] = useState<'Correct' | 'Wrong' | null>(null);
   const [animation, setAnimation] = useState<'Multiplying' | 'Dividing' | null>(null);
 
-  // Sound simulation logic
-  const playClick = useCallback(() => {
-    // In a real app we'd play an audio file.
-    // For now, visual feedback is handled by animation state.
-  }, []);
-
   const currentUnit = useMemo(() => {
     const symbol = UNIT_LABELS[unitType];
     if (dimension === 2) return `${symbol}²`;
@@ -64,15 +59,21 @@ export const UnitStaircaseWidget: React.FC = () => {
   const movePlatform = (direction: 'UP' | 'DOWN') => {
     if (direction === 'UP' && currentStepIndex > 0) {
       setAnimation('Dividing');
-      setValue(prev => prev / stepFactor);
+      setValue(prev => {
+        const next = prev / stepFactor;
+        return parseFloat(next.toPrecision(12));
+      });
       setCurrentStepIndex(prev => prev - 1);
-      playClick();
+      playSoundEffect('step-up');
       setTimeout(() => setAnimation(null), 1000);
     } else if (direction === 'DOWN' && currentStepIndex < STEPS.length - 1) {
       setAnimation('Multiplying');
-      setValue(prev => prev * stepFactor);
+      setValue(prev => {
+        const next = prev * stepFactor;
+        return parseFloat(next.toPrecision(12));
+      });
       setCurrentStepIndex(prev => prev + 1);
-      playClick();
+      playSoundEffect('step-down');
       setTimeout(() => setAnimation(null), 1000);
     }
   };
@@ -93,6 +94,7 @@ export const UnitStaircaseWidget: React.FC = () => {
   const checkChallenge = () => {
     if (challenge && currentStepIndex === challenge.to) {
       setFeedback('Correct');
+      playSoundEffect('success');
       setTimeout(() => {
         setFeedback(null);
         setChallenge(null);
@@ -100,6 +102,7 @@ export const UnitStaircaseWidget: React.FC = () => {
       }, 2000);
     } else {
       setFeedback('Wrong');
+      playSoundEffect('invalid');
       setTimeout(() => setFeedback(null), 1000);
     }
   };
@@ -110,8 +113,16 @@ export const UnitStaircaseWidget: React.FC = () => {
     }
   }, [phase, challenge]);
 
-  // Positions-maskinen row logic
-  const displayValue = value.toFixed(10).replace(/\.?0+$/, "");
+  // Positions-maskinen row logic with precision rounding to prevent IEEE 754 float glitches
+  const displayValue = useMemo(() => {
+    if (isNaN(value) || !isFinite(value)) return '0';
+    const rounded = parseFloat(value.toPrecision(12));
+    if (Math.abs(rounded) < 1e-6 || Math.abs(rounded) >= 1e9) {
+      return rounded.toString();
+    }
+    return rounded.toFixed(10).replace(/\.?0+$/, "");
+  }, [value]);
+
   const parts = displayValue.split('.');
   const integerPart = parts[0] || '0';
   const decimalPart = parts[1] || '';
@@ -202,7 +213,7 @@ export const UnitStaircaseWidget: React.FC = () => {
                       setValue(newValue);
                       setInputValue(newValue.toFixed(5).replace(/\.?0+$/, ""));
                       setCurrentStepIndex(idx);
-                      playClick();
+                      playSoundEffect(powerDiff > 0 ? 'step-up' : 'step-down');
                     }}
                   >
                     <rect x={x + 5} y={y + 5} width="120" height="40" rx="8" className="fill-slate-900/5 blur-sm" />

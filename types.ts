@@ -84,6 +84,14 @@ export interface WidgetInstance {
   groupId?: string;
 }
 
+export interface WhiteboardSnapshot {
+  widgets: WidgetInstance[];
+  groups: WidgetGroup[];
+  transparentWidgets: Record<string, boolean>;
+  actionName?: string;
+  timestamp?: number;
+}
+
 export interface WidgetProps {
   id: string;
 }

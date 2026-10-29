@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
+import { motion, usePresence } from 'framer-motion';
 import { Icons } from './icons';
 
 interface WidgetWrapperProps {
@@ -19,8 +20,10 @@ interface WidgetWrapperProps {
   isGroupInteracting?: boolean;
   onClose: (id: string) => void;
   onFocus: (id: string) => void;
+  onDragStart?: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onDragDelta?: (id: string, deltaX: number, deltaY: number, finished: boolean) => void;
+  onResizeStart?: (id: string) => void;
   onResize?: (id: string, width: number, height: number) => void;
   onResizeDelta?: (id: string, deltaW: number, deltaH: number, finished: boolean) => void;
   onToggleSelect?: (id: string) => void;
@@ -44,8 +47,10 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   isGroupInteracting = false,
   onClose,
   onFocus,
+  onDragStart,
   onMove,
   onDragDelta,
+  onResizeStart,
   onResize,
   onResizeDelta,
   onToggleSelect,
@@ -68,6 +73,11 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   const dragLastPos = useRef({ x: initialX, y: initialY });
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const isTransparentRef = useRef(transparent);
+  if (transparent) {
+    isTransparentRef.current = true;
+  }
+  const isWidgetTransparent = transparent || isTransparentRef.current;
 
   // Sync with props when they change (e.g. via "Arrange" or group move/scale)
   useEffect(() => {
@@ -81,6 +91,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   // --- DRAGGING LOGIC ---
   const startDrag = (clientX: number, clientY: number) => {
     onFocus(id);
+    onDragStart?.(id);
     setIsDragging(true);
     dragStart.current = {
       x: clientX - position.x,
@@ -167,6 +178,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   // --- RESIZING LOGIC ---
   const startResize = (clientX: number, clientY: number) => {
       onFocus(id);
+      onResizeStart?.(id);
       setIsResizing(true);
       resizeStart.current = { 
           x: clientX, 
@@ -248,30 +260,50 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       };
   }, [isResizing, id, onResize, onResizeDelta, size.width, size.height]);
 
-  const containerClasses = transparent 
-    ? `fixed flex flex-col rounded-xl overflow-visible transition-all duration-300 ease-in-out max-w-[98vw] max-h-[90vh] ${
+  const containerClasses = isWidgetTransparent 
+    ? `fixed flex flex-col rounded-xl overflow-visible transition-[box-shadow,ring] duration-200 max-w-[98vw] max-h-[90vh] ${
         isSelected ? 'ring-4 ring-blue-500/80 shadow-2xl' : ''
       }`
-    : `fixed flex flex-col bg-[var(--surface-primary)] rounded-xl widget-shadow border border-[var(--sidebar-border)] overflow-hidden transition-all duration-300 ease-in-out max-w-[98vw] max-h-[90vh] ${
-        isSelected ? 'ring-4 ring-blue-500/80 shadow-2xl scale-[1.008]' : ''
+    : `fixed flex flex-col bg-[var(--surface-primary)] rounded-xl widget-shadow border border-[var(--sidebar-border)] overflow-hidden transition-[box-shadow,ring,border-color,background-color] duration-200 max-w-[98vw] max-h-[90vh] ${
+        isSelected ? 'ring-4 ring-blue-500/80 shadow-2xl' : ''
       }`;
+
+  const [isPresent] = usePresence();
 
   // Disable transition during drag/resize or group interaction to prevent rubberbanding/lag
   const dynamicStyle = {
     left: position.x,
     top: position.y,
-    width: transparent ? 'auto' : size.width,
-    height: transparent ? 'auto' : size.height,
+    width: isWidgetTransparent ? 'auto' : size.width,
+    height: isWidgetTransparent ? 'auto' : size.height,
     zIndex: zIndex,
     touchAction: 'none',
-    transition: isDragging || isResizing || isGroupInteracting ? 'none' : 'all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    pointerEvents: isPresent ? 'auto' : 'none',
+    transition: isDragging || isResizing || isGroupInteracting ? 'none' : 'left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.25s ease, height 0.25s ease'
   } as React.CSSProperties;
 
   return (
-    <div
+    <motion.div
       ref={wrapperRef}
       className={containerClasses}
       style={dynamicStyle}
+      initial={{ opacity: 0, scale: 0.88, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ 
+        opacity: 0, 
+        scale: 0.85, 
+        y: 12,
+        transition: { 
+          duration: 0.2, 
+          ease: [0.32, 0.72, 0, 1] 
+        } 
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 380,
+        damping: 28,
+        mass: 0.85
+      }}
       onMouseDown={(e) => {
         onFocus(id);
         if (e.shiftKey && onToggleSelect) {
@@ -280,7 +312,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
       }}
       onTouchStart={() => onFocus(id)}
     >
-      {!transparent && (
+      {!isWidgetTransparent && (
         <div
           className="h-10 bg-[var(--brand-secondary)] border-b border-[var(--sidebar-border)] flex items-center justify-between px-3 cursor-move select-none flex-shrink-0 touch-none"
           onMouseDown={handleMouseDown}
@@ -360,7 +392,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
         </div>
       )}
 
-      {transparent && (
+      {isWidgetTransparent && (
          <div className="absolute -top-10 left-0 flex items-center gap-1.5 bg-[var(--surface-primary)]/90 backdrop-blur border border-[var(--sidebar-border)] rounded-lg p-1 shadow-sm z-50">
             {onToggleSelect && (
               <button
@@ -412,7 +444,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
       <div className={`
         flex-1 relative
-        ${transparent ? 'p-0 bg-transparent' : 'p-2 sm:p-4 bg-[var(--surface-primary)]/50 backdrop-blur-sm overflow-auto text-[var(--text-main)]'}
+        ${isWidgetTransparent ? 'p-0 bg-transparent' : 'p-2 sm:p-4 bg-[var(--surface-primary)]/50 backdrop-blur-sm overflow-auto text-[var(--text-main)]'}
       `}>
         <div className="h-full w-full">
             {children}
@@ -474,7 +506,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
         )}
       </div>
 
-      {!transparent && (
+      {!isWidgetTransparent && (
           <div 
             className="absolute bottom-0 right-0 w-10 h-10 cursor-nwse-resize z-20 flex items-end justify-end p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-tl touch-none"
             onMouseDown={handleResizeMouseDown}
@@ -484,6 +516,6 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
               <div className="w-0 h-0 border-b-[8px] border-r-[8px] border-l-[8px] border-t-[8px] border-b-slate-400 border-r-slate-400 border-l-transparent border-t-transparent opacity-50"></div>
           </div>
       )}
-    </div>
+    </motion.div>
   );
 });
