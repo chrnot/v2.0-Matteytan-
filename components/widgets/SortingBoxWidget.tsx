@@ -97,12 +97,80 @@ export interface Mission {
   levelColor: string;
   icon: string;
   description: string;
+  learningGoal: string;
   pedagogicalHint: string;
   zones: ZoneConfig[];
   generateItems: () => SortableObject[];
   validateItem: (item: SortableObject, zoneId: string) => boolean;
   guidedOnly?: boolean;
 }
+
+// Tooltip component for displaying pedagogical learning objective on hover
+export const LearningGoalTooltip: React.FC<{ mission: Mission; align?: 'left' | 'right' }> = memo(({ mission, align = 'left' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div 
+      className="relative inline-flex items-center"
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(prev => !prev);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setIsOpen(false)}
+        className="w-5 h-5 flex items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-help shrink-0 shadow-2xs"
+        title={`Lärandemål: ${mission.learningGoal}`}
+        aria-label="Lärandemål för uppdraget"
+      >
+        <Icons.Info size={12} className="shrink-0" />
+      </button>
+
+      {/* Floating tooltip popover card */}
+      <div
+        className={`absolute top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] p-3.5 bg-slate-900/95 dark:bg-slate-900/98 text-white rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md z-50 text-left transition-all duration-200 ${
+          align === 'right' ? 'right-0' : 'left-0 sm:left-auto'
+        } ${
+          isOpen ? 'opacity-100 translate-y-0 pointer-events-auto visible' : 'opacity-0 -translate-y-1 pointer-events-none invisible'
+        }`}
+        style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.35))' }}
+      >
+        {/* Pointer arrow */}
+        <div className={`absolute -top-1.5 w-3 h-3 bg-slate-900 border-t border-l border-slate-700/80 rotate-45 ${
+          align === 'right' ? 'right-2.5' : 'left-2.5'
+        }`} />
+
+        <div className="relative z-10 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs">🎯</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300">
+                Pedagogiskt Lärandemål
+              </span>
+            </div>
+            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${mission.levelColor}`}>
+              {mission.level}
+            </span>
+          </div>
+
+          <p className="text-xs font-semibold text-slate-100 leading-relaxed pt-0.5">
+            {mission.learningGoal}
+          </p>
+
+          <div className="mt-1 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+            <span>Uppdrag {mission.number}: {mission.title}</span>
+            <span className="text-indigo-300 font-bold">Lgr22</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+LearningGoalTooltip.displayName = 'LearningGoalTooltip';
 
 interface CachedZoneRect {
   id: string;
@@ -494,6 +562,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
       icon: '🎨',
       description: 'Placera varje figur i den låda som har exakt samma färg.',
+      learningGoal: 'Utveckla förmågan att klassificera och sortera objekt efter en visuell egenskap (färg), vilket grundlägger logisk abstraktion och mängdlära.',
       pedagogicalHint: 'Titta bara på färgen! Formen och storleken spelar ingen roll här.',
       zones: [
         { id: 'red', label: 'Röda figurer', colorClass: 'bg-red-500/5 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900', hoverClass: 'bg-red-500/15', activeBorderClass: 'ring-4 ring-red-400 border-red-500', accentColor: '#ef4444' },
@@ -533,6 +602,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
       icon: '📐',
       description: 'Sortera figurerna efter deras geometriska grundform (oavsett färg och storlek).',
+      learningGoal: 'Känna igen och särskilja grundläggande geometriska former (cirkel, kvadrat, triangel) oberoende av deras färg, storlek eller orientering.',
       pedagogicalHint: 'Klot räknas som cirklar, kuber som kvadrater och pyramider som trianglar!',
       zones: [
         { id: 'circles', label: 'Cirklar & Klot', subLabel: 'Runda former', colorClass: 'bg-indigo-500/5 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900', hoverClass: 'bg-indigo-500/15', activeBorderClass: 'ring-4 ring-indigo-400 border-indigo-500', accentColor: '#6366f1' },
@@ -575,6 +645,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
       icon: '🧊',
       description: 'Skilj mellan platta 2D-figurer (cirkel, kvadrat, triangel) och rymdgeometriska 3D-kroppar (klot, kub, pyramid).',
+      learningGoal: 'Förstå skillnaden mellan tvådimensionella plana figurer och tredimensionella solida geometriska kroppar med rymd och volym (klot, kub, pyramid).',
       pedagogicalHint: '2D-figurer är helt platta. 3D-kroppar har volym och skuggor som ett riktigt föremål!',
       zones: [
         { id: '2d', label: 'Plana figurer (2D)', subLabel: 'Cirkel, kvadrat, triangel', colorClass: 'bg-emerald-500/5 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900', hoverClass: 'bg-emerald-500/15', activeBorderClass: 'ring-4 ring-emerald-400 border-emerald-500', accentColor: '#10b981' },
@@ -633,6 +704,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
       icon: '📏',
       description: 'Jämför figurernas storlek och sortera dem i Liten, Mellanstor eller Stor.',
+      learningGoal: 'Träna på att jämföra, gradera och ordna objekt utifrån mätbara storleksrelationer (liten, mellan, stor).',
       pedagogicalHint: 'Jämför figurerna bredvid varandra för att se vilken som är minst och störst.',
       zones: [
         { id: 'small', label: 'Små figurer', subLabel: 'Minsta storleken', colorClass: 'bg-slate-500/5 dark:bg-slate-800/25 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-800', hoverClass: 'bg-slate-300/20', activeBorderClass: 'ring-4 ring-slate-400 border-slate-500', accentColor: '#64748b' },
@@ -671,6 +743,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300',
       icon: '🎲',
       description: 'Räkna prickarna på tärningskorten och sortera efter mängd.',
+      learningGoal: 'Stärka taluppfattning, snabb avläsning av antal (subitizing) samt koppla tärningsmönster till mängdbegreppen få, mellan och många.',
       pedagogicalHint: 'Få = 1 eller 2 prickar. Mellan = 3 prickar. Många = 4 eller 5 prickar.',
       zones: [
         { id: 'few', label: 'Få (1–2 prickar)', subLabel: '1 eller 2 prickar', colorClass: 'bg-orange-500/5 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-900', hoverClass: 'bg-orange-500/15', activeBorderClass: 'ring-4 ring-orange-400 border-orange-500', accentColor: '#f97316' },
@@ -706,6 +779,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
       icon: '⚖️',
       description: 'Sortera korten efter om antalet prickar bildar ett jämnt eller udda tal.',
+      learningGoal: 'Utforska talens egenskaper genom parbildning och förstå skillnaden mellan jämna tal (kan delas i par) och udda tal (en blir över).',
       pedagogicalHint: 'Jämna tal (2 och 4) kan delas i två lika par. Udda tal (1, 3 och 5) har alltid en prick över!',
       zones: [
         { id: 'odd', label: 'Udda tal (1, 3, 5)', subLabel: 'En prick blir alltid över', colorClass: 'bg-rose-500/5 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900', hoverClass: 'bg-rose-500/15', activeBorderClass: 'ring-4 ring-rose-400 border-rose-500', accentColor: '#f43f5e' },
@@ -740,6 +814,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-amber-200 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
       icon: '🏆',
       description: 'Klurigt uppdrag! Läs skyltarna noga: varje låda kräver både en viss färg OCH en viss form!',
+      learningGoal: 'Träna kombinatoriskt tänkande genom att samtidigt klassificera utifrån två villkor (både färg OCH form) samt hantera negationer och övriga fall.',
       pedagogicalHint: 'Kontrollera både färg och form innan du släpper. Passar figuren inte i någon speciallåda, ska den till Övriga!',
       zones: [
         { id: 'red-circle', label: 'Röda Cirklar/Klot', subLabel: 'Både röd och rund', colorClass: 'bg-red-500/5 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900', hoverClass: 'bg-red-500/15', activeBorderClass: 'ring-4 ring-red-400 border-red-500', accentColor: '#ef4444' },
@@ -815,6 +890,7 @@ export const SortingBoxWidget: React.FC = () => {
       levelColor: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300',
       icon: '🧪',
       description: 'Helt fri laboration där du eller läraren bestämmer reglerna och vad som ska sorteras var.',
+      learningGoal: 'Formulera egna klassificeringsregler, prova matematiska hypoteser och resonera kring mönster och kategorisering tillsammans med klasskamrater.',
       pedagogicalHint: 'Du kan ändra namnen på lådorna och leka "Gissa min sortering" med en klasskompis!',
       zones: [
         { id: 'custom-0', label: customLabels[0] || 'Låda A', colorClass: 'bg-violet-500/5 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-900', hoverClass: 'bg-violet-500/15', activeBorderClass: 'ring-4 ring-violet-400 border-violet-500', accentColor: '#8b5cf6' },
@@ -1073,9 +1149,12 @@ export const SortingBoxWidget: React.FC = () => {
                     Uppdrag {activeMission.number} av {MISSIONS.length}
                   </span>
                 </div>
-                <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-800 dark:text-slate-100 truncate">
-                  {activeMission.title}
-                </h1>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-800 dark:text-slate-100 truncate">
+                    {activeMission.title}
+                  </h1>
+                  <LearningGoalTooltip mission={activeMission} align="left" />
+                </div>
               </div>
             </div>
 
@@ -1361,10 +1440,13 @@ export const SortingBoxWidget: React.FC = () => {
 
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xl">{activeMission.icon}</span>
-            <div className="min-w-0">
-              <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
-                {activeMission.title}
-              </h4>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 justify-between">
+                <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                  {activeMission.title}
+                </h4>
+                <LearningGoalTooltip mission={activeMission} align="right" />
+              </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                 {activeMission.subtitle}
               </p>
@@ -1570,6 +1652,14 @@ export const SortingBoxWidget: React.FC = () => {
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
                       {m.description}
                     </p>
+
+                    <div className="text-[10px] text-slate-600 dark:text-slate-300 bg-slate-100/70 dark:bg-slate-800/50 p-2 rounded-xl flex items-start gap-1.5 border border-slate-200/60 dark:border-slate-800">
+                      <span className="text-xs shrink-0">🎯</span>
+                      <span className="leading-tight">
+                        <strong className="text-indigo-600 dark:text-indigo-400">Lärandemål: </strong>
+                        {m.learningGoal}
+                      </span>
+                    </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
                       <span>{m.zones.length} mottagare</span>

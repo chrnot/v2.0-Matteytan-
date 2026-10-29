@@ -51,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isDrawingMode = false
 }) => {
   const [activeArea, setActiveArea] = useState<MathArea | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<{ title: string; description: string; top: number } | null>(null);
 
   const getWidgetsInArea = (area: MathArea) => {
     const list = Object.entries(widgetMetadata)
@@ -100,7 +101,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Sökverktyget: ovanför "Taluppfattning och tals användning" men under logotypen */}
         <div className={`p-2 border-b border-[var(--sidebar-border)]/60 ${isOpen ? '' : 'flex justify-center'}`}>
           <button
-            onClick={onOpenSearch}
+            onClick={() => {
+              onOpenSearch();
+              setHoveredItem(null);
+            }}
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setHoveredItem({
+                title: 'Sök verktyg',
+                description: 'Sök bland alla matematiska verktyg och modeller (Ctrl+K / ⌘K).',
+                top: rect.top,
+              });
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
             className={`flex items-center rounded-xl transition-all group border ${
               isOpen ? 'w-full gap-3 p-2.5' : 'justify-center p-2.5'
             } ${
@@ -131,15 +144,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {MATH_AREAS.map((area) => (
             <button
               key={area.id}
-              onClick={() => setActiveArea(activeArea === area.id ? null : area.id)}
+              onClick={() => {
+                setActiveArea(activeArea === area.id ? null : area.id);
+                setHoveredItem(null);
+              }}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredItem({
+                  title: area.label,
+                  description: area.description,
+                  top: rect.top,
+                });
+              }}
+              onMouseLeave={() => setHoveredItem(null)}
               className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all group ${
                 activeArea === area.id 
                   ? 'bg-blue-600 text-white shadow-lg' 
                   : `hover:bg-[var(--sidebar-hover)] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`
               }`}
-              title={area.label}
+              title={area.description}
+              aria-label={area.label}
             >
-              <div className={`p-2 rounded-lg ${
+              <div className={`p-2 rounded-lg shrink-0 ${
                 activeArea === area.id 
                   ? 'bg-white/20' 
                   : isDarkMode ? 'bg-slate-800 group-hover:bg-slate-700' : 'bg-slate-100 group-hover:bg-white'
@@ -147,14 +173,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <area.icon size={20} />
               </div>
               {isOpen && (
-                <div className="flex-1 text-left">
-                  <div className="text-xs font-black uppercase tracking-widest leading-none mb-0.5">{area.label}</div>
-                  <div className={`text-[9px] line-clamp-1 ${activeArea === area.id ? 'text-blue-100' : 'text-slate-400'}`}>
-                    {area.description}
-                  </div>
+                <div className="flex-1 text-left min-w-0">
+                  <div className="text-xs font-black uppercase tracking-widest leading-snug">{area.label}</div>
                 </div>
               )}
-              {isOpen && <Icons.ChevronRight size={14} className={`transition-transform ${activeArea === area.id ? 'rotate-90' : ''}`} />}
+              {isOpen && <Icons.ChevronRight size={14} className={`transition-transform shrink-0 ${activeArea === area.id ? 'rotate-90' : ''}`} />}
             </button>
           ))}
         </div>
@@ -165,58 +188,86 @@ export const Sidebar: React.FC<SidebarProps> = ({
             href="https://matteytan.se/mattelab"
             target="_blank"
             rel="noopener noreferrer"
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setHoveredItem({
+                title: 'Mattelab',
+                description: 'Laborativ miljö för interaktiv matematik.',
+                top: rect.top,
+              });
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
             className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
               isDarkMode 
                 ? 'hover:bg-slate-800 text-slate-300' 
                 : 'hover:bg-white text-slate-700 bg-white/50 border border-slate-200'
             }`}
-            title="Gå till Mattelab"
+            title="Laborativ miljö"
+            aria-label="Mattelab"
           >
-            <div className={`p-2 rounded-lg transition-colors ${
+            <div className={`p-2 rounded-lg shrink-0 transition-colors ${
               isDarkMode ? 'bg-indigo-900/30 text-indigo-400 group-hover:bg-indigo-900/50' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200'
             }`}>
               <Icons.Lab size={20} />
             </div>
             {isOpen && (
-              <div className="flex-1 text-left">
-                <div className="text-xs font-black uppercase tracking-widest leading-none mb-0.5">Mattelab</div>
-                <div className="text-[9px] text-slate-400 line-clamp-1">Laborativ miljö</div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-xs font-black uppercase tracking-widest leading-snug">Mattelab</div>
               </div>
             )}
-            {isOpen && <Icons.ArrowRight size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />}
+            {isOpen && <Icons.ArrowRight size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0 shrink-0" />}
           </a>
 
           <a
             href="https://gemini.google.com/gem/1IJSJChUR2EHRw5PTn_-pvF_hJdPs2PRS?usp=sharing"
             target="_blank"
             rel="noopener noreferrer"
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setHoveredItem({
+                title: 'Concept Cartoons',
+                description: 'Diskutera och fördjupa matematiska begrepp.',
+                top: rect.top,
+              });
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
             className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
               isDarkMode 
                 ? 'hover:bg-slate-800 text-slate-300' 
                 : 'hover:bg-white text-slate-700 bg-white/50 border border-slate-200'
             }`}
-            title="Gå till Concept Cartoons"
+            title="Diskutera matematik"
+            aria-label="Concept Cartoons"
           >
-            <div className={`p-2 rounded-lg transition-colors ${
+            <div className={`p-2 rounded-lg shrink-0 transition-colors ${
               isDarkMode ? 'bg-amber-900/30 text-amber-400 group-hover:bg-amber-900/50' : 'bg-amber-100 text-amber-600 group-hover:bg-amber-200'
             }`}>
               <Icons.Feedback size={20} />
             </div>
             {isOpen && (
-              <div className="flex-1 text-left">
-                <div className="text-xs font-black uppercase tracking-widest leading-none mb-0.5">Concept Cartoons</div>
-                <div className="text-[9px] text-slate-400 line-clamp-1">Diskutera matematik</div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-xs font-black uppercase tracking-widest leading-snug">Concept Cartoons</div>
               </div>
             )}
-            {isOpen && <Icons.Maximize size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-y-1 group-hover:translate-y-0" />}
+            {isOpen && <Icons.Maximize size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-all -translate-y-1 group-hover:translate-y-0 shrink-0" />}
           </a>
 
-          {/* Verktyg Button (swapped with Ljust/Mörkt) */}
+          {/* Verktyg Button */}
           <button
             onClick={() => {
               onToggleTools?.();
               if (activeArea) setActiveArea(null);
+              setHoveredItem(null);
             }}
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setHoveredItem({
+                title: 'Verktyg',
+                description: 'Rita, ändra bakgrund och extra funktioner.',
+                top: rect.top,
+              });
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
             className={`flex items-center rounded-xl transition-all group ${
               isOpen ? 'w-full gap-3 p-3' : 'justify-center p-3'
             } ${
@@ -226,9 +277,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ? 'hover:bg-slate-800 text-slate-300 bg-slate-800/40 border border-slate-700/50' 
                   : 'hover:bg-white text-slate-700 bg-white/70 border border-slate-200'
             }`}
-            title="Verktyg (Rita, bakgrund, m.m.)"
+            title="Rita, bakgrund m.m."
+            aria-label="Verktyg"
           >
-            <div className={`p-2 rounded-lg transition-colors ${
+            <div className={`p-2 rounded-lg shrink-0 transition-colors ${
               isToolsOpen
                 ? 'bg-white/20 text-white'
                 : isDarkMode ? 'bg-blue-950/50 text-blue-400 group-hover:bg-blue-900/60' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-100'
@@ -236,15 +288,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Icons.Tools size={20} />
             </div>
             {isOpen && (
-              <div className="flex-1 text-left">
-                <div className="text-xs font-black uppercase tracking-widest leading-none mb-0.5">Verktyg</div>
-                <div className={`text-[9px] line-clamp-1 ${isToolsOpen ? 'text-blue-100' : 'text-slate-400'}`}>
-                  Rita, bakgrund m.m.
-                </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-xs font-black uppercase tracking-widest leading-snug">Verktyg</div>
               </div>
             )}
             {isOpen && (
-              <Icons.ChevronRight size={14} className={`transition-transform duration-200 ${isToolsOpen ? 'rotate-90' : ''}`} />
+              <Icons.ChevronRight size={14} className={`transition-transform duration-200 shrink-0 ${isToolsOpen ? 'rotate-90' : ''}`} />
             )}
           </button>
         </div>
@@ -408,6 +457,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 </>
               )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Hover Tooltip for buttons */}
+      <AnimatePresence>
+        {hoveredItem && !activeArea && !isToolsOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: -8, scale: 0.96 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -6, scale: 0.96 }}
+            transition={{ duration: 0.15 }}
+            style={{ 
+              top: Math.max(12, Math.min(typeof window !== 'undefined' ? window.innerHeight - 80 : 500, hoveredItem.top)), 
+              left: isOpen ? 288 : 88 
+            }}
+            className="fixed z-[3500] pointer-events-none max-w-xs w-64 p-3 rounded-xl bg-slate-900/95 dark:bg-slate-800/95 text-white shadow-2xl border border-slate-700/80 backdrop-blur-md"
+          >
+            <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1">
+              {hoveredItem.title}
+            </div>
+            <div className="text-xs text-slate-200 leading-snug font-medium">
+              {hoveredItem.description}
             </div>
           </motion.div>
         )}

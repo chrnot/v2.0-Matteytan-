@@ -46,15 +46,19 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Set display size
-    canvas.width = window.innerWidth * window.devicePixelRatio;
-    canvas.height = window.innerHeight * window.devicePixelRatio;
-    canvas.style.width = `${window.innerWidth}px`;
-    canvas.style.height = `${window.innerHeight}px`;
+    // Set display size safely
+    const initialWidth = Math.max(1, window.innerWidth || 1);
+    const initialHeight = Math.max(1, window.innerHeight || 1);
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = initialWidth * dpr;
+    canvas.height = initialHeight * dpr;
+    canvas.style.width = `${initialWidth}px`;
+    canvas.style.height = `${initialHeight}px`;
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.scale(dpr, dpr);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       contextRef.current = ctx;
@@ -62,29 +66,46 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
 
     const handleResize = () => {
       if (!canvas || !ctx) return;
-      // Copy existing canvas content before resizing
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      if (tempCtx) {
-        tempCtx.drawImage(canvas, 0, 0);
+      const newWidth = window.innerWidth;
+      const newHeight = window.innerHeight;
+      const pixelRatio = window.devicePixelRatio || 1;
+      if (newWidth <= 0 || newHeight <= 0) return;
+
+      // Copy existing canvas content before resizing only if canvas has valid dimensions
+      let tempCanvas: HTMLCanvasElement | null = null;
+      if (canvas.width > 0 && canvas.height > 0) {
+        tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        if (tempCtx) {
+          try {
+            tempCtx.drawImage(canvas, 0, 0);
+          } catch (e) {
+            console.warn('Failed to copy canvas content during resize:', e);
+            tempCanvas = null;
+          }
+        }
       }
 
-      canvas.width = window.innerWidth * window.devicePixelRatio;
-      canvas.height = window.innerHeight * window.devicePixelRatio;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      canvas.width = newWidth * pixelRatio;
+      canvas.height = newHeight * pixelRatio;
+      canvas.style.width = `${newWidth}px`;
+      canvas.style.height = `${newHeight}px`;
+      ctx.scale(pixelRatio, pixelRatio);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      // Restore previously drawn content
-      if (tempCtx) {
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.drawImage(tempCanvas, 0, 0);
-        ctx.restore();
+      // Restore previously drawn content if available and dimensions are valid
+      if (tempCanvas && tempCanvas.width > 0 && tempCanvas.height > 0) {
+        try {
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.drawImage(tempCanvas, 0, 0);
+          ctx.restore();
+        } catch (e) {
+          console.warn('Failed to restore canvas content during resize:', e);
+        }
       }
     };
 
@@ -102,8 +123,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       contextRef.current.moveTo(x, y);
     } else {
       const canvas = canvasRef.current;
-      if (canvas) {
-        savedImageDataRef.current = contextRef.current.getImageData(0, 0, canvas.width, canvas.height);
+      if (canvas && canvas.width > 0 && canvas.height > 0 && contextRef.current) {
+        try {
+          savedImageDataRef.current = contextRef.current.getImageData(0, 0, canvas.width, canvas.height);
+        } catch {
+          savedImageDataRef.current = null;
+        }
       }
       startXRef.current = x;
       startYRef.current = y;

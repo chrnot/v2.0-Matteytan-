@@ -90,12 +90,14 @@ export const ExportModal: React.FC<ExportModalProps> = memo(({
         }
 
         const offscreen = document.createElement('canvas');
-        offscreen.width = targetWidth;
-        offscreen.height = targetHeight;
+        offscreen.width = Math.max(1, targetWidth);
+        offscreen.height = Math.max(1, targetHeight);
         const ctx = offscreen.getContext('2d');
         if (!ctx) throw new Error('Kunde inte skapa ritkontext');
 
-        ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
+        if (sourceWidth > 0 && sourceHeight > 0 && targetWidth > 0 && targetHeight > 0 && img.width > 0 && img.height > 0) {
+          ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
+        }
 
         if (includeWatermark) {
           const text = `Matteytan.se • ${new Date().toLocaleDateString('sv-SE')}`;
