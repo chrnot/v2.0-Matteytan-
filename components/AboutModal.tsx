@@ -9,8 +9,14 @@ interface AboutModalProps {
 export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-[var(--surface-primary)] w-full max-w-2xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-[var(--sidebar-border)]">
+    <div 
+      className="fixed inset-0 z-[3000] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-[var(--surface-primary)] w-full max-w-2xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-[var(--sidebar-border)]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar text-[var(--text-main)]">
           <div className="flex justify-between items-start mb-6">
             <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-main)] leading-tight">

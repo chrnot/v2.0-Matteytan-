@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '../icons';
 import { playSoundEffect } from '../../src/utils/audio';
+import { useClickOutside } from '../../src/utils/useClickOutside';
 
 // Types and models
 export interface SortableObject {
@@ -108,9 +109,12 @@ export interface Mission {
 // Tooltip component for displaying pedagogical learning objective on hover
 export const LearningGoalTooltip: React.FC<{ mission: Mission; align?: 'left' | 'right' }> = memo(({ mission, align = 'left' }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  useClickOutside(tooltipRef, () => setIsOpen(false), isOpen);
 
   return (
     <div 
+      ref={tooltipRef}
       className="relative inline-flex items-center"
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}

@@ -82,6 +82,7 @@ export interface WidgetInstance {
   width?: number;
   height?: number;
   groupId?: string;
+  isLocked?: boolean;
 }
 
 export interface WhiteboardSnapshot {

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MathArea, WidgetType, Difficulty, MathSubArea } from '../types';
 import { MATH_AREAS } from './MathAreaConfig';
 import { Icons } from './icons';
 import { Logo } from './Logo';
+import { useClickOutside } from '../src/utils/useClickOutside';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -52,6 +53,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [activeArea, setActiveArea] = useState<MathArea | null>(null);
   const [hoveredItem, setHoveredItem] = useState<{ title: string; description: string; top: number } | null>(null);
+  const sidebarContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-collapse open menus when clicking or tapping anywhere outside
+  useClickOutside(
+    sidebarContainerRef,
+    () => {
+      if (activeArea) setActiveArea(null);
+      if (isToolsOpen) onCloseTools?.();
+      if (isOpen && typeof window !== 'undefined' && window.innerWidth < 768) {
+        onOpenChange(false);
+      }
+      setHoveredItem(null);
+    },
+    Boolean(activeArea || isToolsOpen || (isOpen && typeof window !== 'undefined' && window.innerWidth < 768))
+  );
+
+  // Escape key closes open submenus
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (activeArea) setActiveArea(null);
+        if (isToolsOpen) onCloseTools?.();
+        if (isOpen && window.innerWidth < 768) onOpenChange(false);
+        setHoveredItem(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeArea, isToolsOpen, isOpen, onCloseTools, onOpenChange]);
 
   const getWidgetsInArea = (area: MathArea) => {
     const list = Object.entries(widgetMetadata)
@@ -78,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="fixed left-0 top-0 h-full z-[3000] flex">
+    <div ref={sidebarContainerRef} className="fixed left-0 top-0 h-full z-[3000] flex">
       {/* Sidebar Main */}
       <motion.div 
         initial={false}

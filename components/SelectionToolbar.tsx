@@ -5,8 +5,10 @@ interface SelectionToolbarProps {
   selectedCount: number;
   totalWidgets: number;
   hasGroupedSelected: boolean;
+  allSelectedLocked?: boolean;
   onGroup: () => void;
   onUngroupSelected: () => void;
+  onToggleLockSelected?: () => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
   isDarkMode?: boolean;
@@ -16,8 +18,10 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = memo(({
   selectedCount,
   totalWidgets,
   hasGroupedSelected,
+  allSelectedLocked = false,
   onGroup,
   onUngroupSelected,
+  onToggleLockSelected,
   onSelectAll,
   onClearSelection,
   isDarkMode = false
@@ -57,6 +61,22 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = memo(({
         >
           <Icons.Unlink size={16} />
           <span>Avgruppera</span>
+        </button>
+      )}
+
+      {/* Lock / Unlock all selected widgets */}
+      {onToggleLockSelected && (
+        <button
+          onClick={onToggleLockSelected}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all border hover:scale-105 active:scale-95 ${
+            allSelectedLocked
+              ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 shadow-xs'
+              : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+          title={allSelectedLocked ? 'Lås upp markerade widgetar' : 'Lås markerade widgetar (kan ej flyttas av misstag)'}
+        >
+          {allSelectedLocked ? <Icons.Unlock size={15} /> : <Icons.Lock size={15} />}
+          <span>{allSelectedLocked ? 'Lås upp' : 'Lås'}</span>
         </button>
       )}
 

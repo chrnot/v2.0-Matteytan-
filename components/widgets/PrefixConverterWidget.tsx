@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '../icons';
+import { useClickOutside } from '../../src/utils/useClickOutside';
 
 type PrefixPower = 12 | 9 | 6 | 3 | 2 | 1 | 0 | -1 | -2 | -3 | -6 | -9;
 
@@ -53,6 +54,8 @@ export const PrefixConverterWidget: React.FC = () => {
   const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  useClickOutside(settingsRef, () => setShowSettings(false), showSettings);
   const [enabledPrefixes, setEnabledPrefixes] = useState<Set<PrefixPower>>(new Set(PREFIXES.map(p => p.power)));
   const [unpackState, setUnpackState] = useState<'idle' | 'expanded' | 'calculated'>('idle');
 
@@ -309,6 +312,7 @@ export const PrefixConverterWidget: React.FC = () => {
       <AnimatePresence>
         {showSettings && (
           <motion.div 
+            ref={settingsRef}
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}

@@ -18,6 +18,8 @@ interface WidgetWrapperProps {
   groupName?: string;
   groupColor?: string;
   isGroupInteracting?: boolean;
+  isLocked?: boolean;
+  onToggleLock?: (id: string) => void;
   onClose: (id: string) => void;
   onFocus: (id: string) => void;
   onDragStart?: (id: string) => void;
@@ -41,10 +43,12 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   transparent = false,
   klagSupport = false,
   isSelected = false,
+  isLocked = false,
   groupId,
   groupName,
   groupColor,
   isGroupInteracting = false,
+  onToggleLock,
   onClose,
   onFocus,
   onDragStart,
@@ -90,6 +94,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
   // --- DRAGGING LOGIC ---
   const startDrag = (clientX: number, clientY: number) => {
+    if (isLocked) return;
     onFocus(id);
     onDragStart?.(id);
     setIsDragging(true);
@@ -102,6 +107,10 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation(); 
+    if (isLocked) {
+      onFocus(id);
+      return;
+    }
     if (e.shiftKey && onToggleSelect) {
       onToggleSelect(id);
       return;
@@ -111,6 +120,10 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
+    if (isLocked) {
+      onFocus(id);
+      return;
+    }
     const touch = e.touches[0];
     startDrag(touch.clientX, touch.clientY);
   };
@@ -177,6 +190,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
   // --- RESIZING LOGIC ---
   const startResize = (clientX: number, clientY: number) => {
+      if (isLocked) return;
       onFocus(id);
       onResizeStart?.(id);
       setIsResizing(true);
@@ -189,12 +203,14 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   };
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
+      if (isLocked) return;
       e.stopPropagation();
       e.preventDefault();
       startResize(e.clientX, e.clientY);
   };
 
   const handleResizeTouchStart = (e: React.TouchEvent) => {
+      if (isLocked) return;
       e.stopPropagation();
       const touch = e.touches[0];
       startResize(touch.clientX, touch.clientY);
@@ -263,8 +279,12 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
   const containerClasses = isWidgetTransparent 
     ? `fixed flex flex-col rounded-xl overflow-visible transition-[box-shadow,ring] duration-200 max-w-[98vw] max-h-[90vh] ${
         isSelected ? 'ring-4 ring-blue-500/80 shadow-2xl' : ''
-      }`
-    : `fixed flex flex-col bg-[var(--surface-primary)] rounded-xl widget-shadow border border-[var(--sidebar-border)] overflow-hidden transition-[box-shadow,ring,border-color,background-color] duration-200 max-w-[98vw] max-h-[90vh] ${
+      } ${isLocked ? 'ring-2 ring-amber-400/60 shadow-lg' : ''}`
+    : `fixed flex flex-col bg-[var(--surface-primary)] rounded-xl widget-shadow border overflow-hidden transition-[box-shadow,ring,border-color,background-color] duration-200 max-w-[98vw] max-h-[90vh] ${
+        isLocked
+          ? 'border-amber-400/70 dark:border-amber-600/70 shadow-lg ring-1 ring-amber-400/30'
+          : 'border-[var(--sidebar-border)]'
+      } ${
         isSelected ? 'ring-4 ring-blue-500/80 shadow-2xl' : ''
       }`;
 
@@ -314,9 +334,12 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
     >
       {!isWidgetTransparent && (
         <div
-          className="h-10 bg-[var(--brand-secondary)] border-b border-[var(--sidebar-border)] flex items-center justify-between px-3 cursor-move select-none flex-shrink-0 touch-none"
+          className={`h-10 bg-[var(--brand-secondary)] border-b border-[var(--sidebar-border)] flex items-center justify-between px-3 select-none flex-shrink-0 touch-none ${
+            isLocked ? 'cursor-default' : 'cursor-move'
+          }`}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
+          title={isLocked ? 'Fönstret är låst (kan ej flyttas)' : undefined}
         >
           <div className="flex items-center gap-2 min-w-0 pr-2">
             {/* Multi-selection toggle checkbox */}
@@ -338,9 +361,21 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
               </button>
             )}
 
-            <span className="font-semibold text-[var(--text-main)] text-sm truncate pointer-events-none opacity-90">
-              {title}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0 truncate">
+              <span className="font-semibold text-[var(--text-main)] text-sm truncate pointer-events-none opacity-90">
+                {title}
+              </span>
+
+              {isLocked && (
+                <span 
+                  className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/80 select-none flex-shrink-0 animate-in fade-in duration-200"
+                  title="Fönstret är fixerat på whiteboarden och kan ej flyttas av misstag."
+                >
+                  <Icons.Lock size={10} />
+                  <span>Låst</span>
+                </span>
+              )}
+            </div>
 
             {/* Group badge */}
             {groupId && groupName && (
@@ -361,7 +396,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
 
           <div className="flex items-center gap-1">
             {klagSupport && (
-              <div className="flex items-center bg-slate-200/50 p-0.5 rounded-lg mr-2">
+              <div className="flex items-center bg-slate-200/50 p-0.5 rounded-lg mr-1 sm:mr-2">
                 {[
                   { mode: 'KONKRET', label: 'K', title: 'Konkret handlingsform' },
                   { mode: 'LOGISK', label: 'L', title: 'Logisk/språklig form' },
@@ -381,6 +416,27 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
                 ))}
               </div>
             )}
+
+            {/* Lock / Unlock Toggle Button */}
+            {onToggleLock && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleLock(id);
+                }}
+                className={`p-1.5 rounded transition-all ${
+                  isLocked
+                    ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 ring-1 ring-amber-400/60 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
+                }`}
+                title={isLocked ? 'Låst position – Klicka för att låsa upp fönstret' : 'Lås fönster på whiteboarden (förhindrar att det flyttas av misstag)'}
+                aria-label={isLocked ? 'Lås upp' : 'Lås'}
+              >
+                {isLocked ? <Icons.Lock size={16} /> : <Icons.Unlock size={16} />}
+              </button>
+            )}
+
             <button
               onClick={(e) => { e.stopPropagation(); onClose(id); }}
               className="p-1.5 hover:bg-red-100 dark:hover:bg-red-950/40 text-slate-400 hover:text-red-500 rounded transition-colors"
@@ -411,11 +467,35 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
                 <Icons.Check size={12} className={isSelected ? 'opacity-100 stroke-[3]' : 'opacity-0'} />
               </button>
             )}
+
+            {/* Lock toggle for transparent widget */}
+            {onToggleLock && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleLock(id);
+                }}
+                className={`p-1.5 rounded transition-colors ${
+                  isLocked
+                    ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-300 ring-1 ring-amber-400/60'
+                    : 'text-[var(--text-main)] opacity-60 hover:opacity-100 hover:bg-[var(--sidebar-hover)]'
+                }`}
+                title={isLocked ? 'Låst position – Klicka för att låsa upp' : 'Lås verktygets position'}
+              >
+                {isLocked ? <Icons.Lock size={16} /> : <Icons.Unlock size={16} />}
+              </button>
+            )}
+
             <div 
-                className="p-1.5 cursor-move text-[var(--text-main)] opacity-60 hover:bg-[var(--sidebar-hover)] rounded touch-none"
-                onMouseDown={handleMouseDown}
-                onTouchStart={handleTouchStart}
-                title="Flytta"
+                className={`p-1.5 rounded touch-none ${
+                  isLocked
+                    ? 'opacity-30 cursor-not-allowed text-slate-400'
+                    : 'cursor-move text-[var(--text-main)] opacity-60 hover:bg-[var(--sidebar-hover)]'
+                }`}
+                onMouseDown={isLocked ? undefined : handleMouseDown}
+                onTouchStart={isLocked ? undefined : handleTouchStart}
+                title={isLocked ? 'Verktyget är låst på tavlan' : 'Flytta'}
             >
                 <Icons.Move size={18} />
             </div>
@@ -506,7 +586,7 @@ export const WidgetWrapper: React.FC<WidgetWrapperProps> = memo(({
         )}
       </div>
 
-      {!isWidgetTransparent && (
+      {!isWidgetTransparent && !isLocked && (
           <div 
             className="absolute bottom-0 right-0 w-10 h-10 cursor-nwse-resize z-20 flex items-end justify-end p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-tl touch-none"
             onMouseDown={handleResizeMouseDown}

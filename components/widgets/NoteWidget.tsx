@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Icons } from '../icons';
+import { useClickOutside } from '../../src/utils/useClickOutside';
 
 interface NoteWidgetProps {
   id?: string;
@@ -183,6 +184,10 @@ export const NoteWidget: React.FC<NoteWidgetProps> = ({ id = 'default' }) => {
   const [newCheckItemText, setNewCheckItemText] = useState('');
   const [showInfo, setShowInfo] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const themePickerRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(themePickerRef, () => setShowThemePicker(false), showThemePicker);
+
   const [copied, setCopied] = useState(false);
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
@@ -376,7 +381,7 @@ export const NoteWidget: React.FC<NoteWidgetProps> = ({ id = 'default' }) => {
 
         <div className="flex items-center gap-1 shrink-0">
           {/* Theme Palette Button */}
-          <div className="relative">
+          <div className="relative" ref={themePickerRef}>
             <button
               onClick={() => setShowThemePicker(!showThemePicker)}
               className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors"
@@ -727,8 +732,14 @@ export const NoteWidget: React.FC<NoteWidgetProps> = ({ id = 'default' }) => {
 
       {/* Info Modal */}
       {showInfo && (
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+        <div 
+          className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setShowInfo(false)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-800 rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                 <Icons.Note size={20} />

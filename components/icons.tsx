@@ -94,10 +94,14 @@ import {
   FileDown,
   Undo,
   Redo,
-  Target
+  Target,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 export const Icons = {
+  Lock,
+  Unlock,
   Target,
   Undo,
   Redo,

@@ -10,6 +10,7 @@ import { DrawingCanvas, DrawingCanvasHandle } from './components/DrawingCanvas';
 import { WidgetGroupFrame } from './components/WidgetGroupFrame';
 import { SelectionToolbar } from './components/SelectionToolbar';
 import { ExportModal } from './components/ExportModal';
+import { useClickOutside } from './src/utils/useClickOutside';
 
 // Lazy load widgets
 const NumberLineWidget = lazy(() => import('./components/widgets/NumberLineWidget').then(m => ({ default: m.NumberLineWidget })));
@@ -380,24 +381,17 @@ const App: React.FC = () => {
   const [isArrangeGroupOpen, setIsArrangeGroupOpen] = useState(false);
   const arrangeMenuRef = useRef<HTMLDivElement>(null);
 
+  useClickOutside(arrangeMenuRef, () => setIsArrangeGroupOpen(false), isArrangeGroupOpen);
+
   useEffect(() => {
     if (!isArrangeGroupOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (arrangeMenuRef.current && !arrangeMenuRef.current.contains(e.target as Node)) {
-        setIsArrangeGroupOpen(false);
-      }
-    };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsArrangeGroupOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isArrangeGroupOpen]);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -648,11 +642,12 @@ const App: React.FC = () => {
       }
       beforeInteractionSnapshotRef.current = null;
     }
-    setWidgets(prev => prev.map(w => w.id === id ? { ...w, x, y } : w));
+    setWidgets(prev => prev.map(w => w.id === id ? (w.isLocked ? w : { ...w, x, y }) : w));
   }, [pushSnapshotToUndo]);
 
   const handleWidgetResizeStart = useCallback((id: string) => {
     const target = widgets.find(w => w.id === id);
+    if (target?.isLocked) return;
     const title = target ? (WIDGET_CONFIG[target.type]?.title || 'Widget') : 'Widget';
     beforeInteractionSnapshotRef.current = captureSnapshot(`Ändra storlek (${title})`);
   }, [widgets, captureSnapshot]);
@@ -665,12 +660,39 @@ const App: React.FC = () => {
       }
       beforeInteractionSnapshotRef.current = null;
     }
-    setWidgets(prev => prev.map(w => w.id === id ? { ...w, width, height } : w));
+    setWidgets(prev => prev.map(w => w.id === id ? (w.isLocked ? w : { ...w, width, height }) : w));
   }, [pushSnapshotToUndo]);
   
   const toggleTransparency = useCallback((id: string, isTrans: boolean) => {
       setTransparentWidgets(prev => ({ ...prev, [id]: isTrans }));
   }, []);
+
+  // Lock / Unlock individual widget
+  const toggleLockWidget = useCallback((id: string) => {
+    setWidgets(prev => {
+      const target = prev.find(w => w.id === id);
+      if (!target) return prev;
+      const nextLocked = !target.isLocked;
+      const title = WIDGET_CONFIG[target.type]?.title || 'Widget';
+      pushSnapshotToUndo(captureSnapshot(nextLocked ? `Lås ${title}` : `Lås upp ${title}`));
+      showUndoFeedback(nextLocked ? `${title} är nu låst på whiteboarden` : `${title} är upplåst`);
+      return prev.map(w => w.id === id ? { ...w, isLocked: nextLocked } : w);
+    });
+  }, [captureSnapshot, pushSnapshotToUndo, showUndoFeedback]);
+
+  // Lock / Unlock multiple selected widgets
+  const toggleLockSelectedWidgets = useCallback(() => {
+    if (selectedWidgetIds.length === 0) return;
+    setWidgets(prev => {
+      const selected = prev.filter(w => selectedWidgetIds.includes(w.id));
+      if (selected.length === 0) return prev;
+      const allLocked = selected.every(w => w.isLocked);
+      const nextLocked = !allLocked;
+      pushSnapshotToUndo(captureSnapshot(nextLocked ? 'Lås markerade fönster' : 'Lås upp markerade fönster'));
+      showUndoFeedback(nextLocked ? `${selected.length} fönster låsta på tavlan` : `${selected.length} fönster upplåsta`);
+      return prev.map(w => selectedWidgetIds.includes(w.id) ? { ...w, isLocked: nextLocked } : w);
+    });
+  }, [selectedWidgetIds, captureSnapshot, pushSnapshotToUndo, showUndoFeedback]);
 
   // Multi-selection handlers
   const toggleSelectWidget = useCallback((id: string) => {
@@ -698,7 +720,7 @@ const App: React.FC = () => {
       setIsGroupInteracting(false);
       if (beforeInteractionSnapshotRef.current) {
         const moved = widgets.some(w => {
-          if (w.groupId !== groupId) return false;
+          if (w.groupId !== groupId || w.isLocked) return false;
           const orig = beforeInteractionSnapshotRef.current?.widgets.find(ow => ow.id === w.id);
           return orig && (orig.x !== w.x || orig.y !== w.y);
         });
@@ -710,12 +732,12 @@ const App: React.FC = () => {
       return;
     }
     setIsGroupInteracting(true);
-    setWidgets(prev => prev.map(w => w.groupId === groupId ? { ...w, x: w.x + deltaX, y: w.y + deltaY } : w));
+    setWidgets(prev => prev.map(w => w.groupId === groupId && !w.isLocked ? { ...w, x: w.x + deltaX, y: w.y + deltaY } : w));
   }, [widgets, pushSnapshotToUndo]);
 
   const handleWidgetDragDelta = useCallback((id: string, deltaX: number, deltaY: number, finished: boolean) => {
     const widget = widgets.find(w => w.id === id);
-    if (!widget || !widget.groupId) {
+    if (!widget || !widget.groupId || widget.isLocked) {
       if (finished) setIsGroupInteracting(false);
       return;
     }
@@ -725,7 +747,7 @@ const App: React.FC = () => {
     }
     setIsGroupInteracting(true);
     setWidgets(prev => prev.map(w => {
-      if (w.groupId === widget.groupId && w.id !== id) {
+      if (w.groupId === widget.groupId && w.id !== id && !w.isLocked) {
         return { ...w, x: w.x + deltaX, y: w.y + deltaY };
       }
       return w;
@@ -756,6 +778,7 @@ const App: React.FC = () => {
     }
     setIsGroupInteracting(true);
     setWidgets(prev => prev.map(w => {
+      if (w.isLocked) return w;
       const snap = snapshots.find(s => s.id === w.id);
       if (!snap) return w;
       const newX = origin.minX + (snap.x - origin.minX) * scaleX;
@@ -775,12 +798,12 @@ const App: React.FC = () => {
   const handleQuickScale = useCallback((groupId: string, factor: number) => {
     pushSnapshotToUndo(captureSnapshot(factor > 1 ? 'Förstora grupp' : 'Förminska grupp'));
     setWidgets(prev => {
-      const groupWidgets = prev.filter(w => w.groupId === groupId);
+      const groupWidgets = prev.filter(w => w.groupId === groupId && !w.isLocked);
       if (groupWidgets.length === 0) return prev;
       const minX = Math.min(...groupWidgets.map(w => w.x));
       const minY = Math.min(...groupWidgets.map(w => w.y));
       return prev.map(w => {
-        if (w.groupId !== groupId) return w;
+        if (w.groupId !== groupId || w.isLocked) return w;
         const newX = minX + (w.x - minX) * factor;
         const newY = minY + (w.y - minY) * factor;
         const newW = Math.max(220, (w.width || 400) * factor);
@@ -853,6 +876,8 @@ const App: React.FC = () => {
     pushSnapshotToUndo(captureSnapshot('Ordna fönster'));
     setWidgets(prevWidgets => {
         if (prevWidgets.length === 0) return prevWidgets;
+        const unlockedWidgets = prevWidgets.filter(w => !w.isLocked);
+        if (unlockedWidgets.length === 0) return prevWidgets;
 
         const screenW = window.innerWidth;
         const screenH = window.innerHeight;
@@ -867,7 +892,7 @@ const App: React.FC = () => {
         let cols: number;
         let rows: number;
 
-        const n = prevWidgets.length;
+        const n = unlockedWidgets.length;
         if (n === 1) { cols = 1; rows = 1; }
         else if (n === 2) { cols = 2; rows = 1; }
         else if (n <= 4) { cols = 2; rows = 2; }
@@ -878,7 +903,10 @@ const App: React.FC = () => {
         const cellW = (availableW - (cols - 1) * gap) / cols;
         const cellH = (availableH - (rows - 1) * gap) / rows;
 
-        return prevWidgets.map((w, index) => {
+        let unlockedIndex = 0;
+        return prevWidgets.map((w) => {
+            if (w.isLocked) return w;
+            const index = unlockedIndex++;
             const col = index % cols;
             const row = Math.floor(index / cols);
             
@@ -899,7 +927,7 @@ const App: React.FC = () => {
             return { ...w, x, y, width, height };
         });
     });
-  }, []);
+  }, [widgets.length, captureSnapshot, pushSnapshotToUndo]);
 
   const getBackgroundClass = useCallback(() => {
     switch (background) {
@@ -1240,10 +1268,12 @@ const App: React.FC = () => {
               transparent={transparentWidgets[widget.id]}
               klagSupport={config.klagSupport}
               isSelected={isSelected}
+              isLocked={widget.isLocked}
               groupId={widget.groupId}
               groupName={widgetGroup?.name}
               groupColor={widgetGroup?.color}
               isGroupInteracting={isGroupInteracting}
+              onToggleLock={toggleLockWidget}
               onClose={removeWidget}
               onFocus={bringToFront}
               onDragStart={handleWidgetDragStart}
@@ -1270,8 +1300,10 @@ const App: React.FC = () => {
         selectedCount={selectedWidgetIds.length}
         totalWidgets={widgets.length}
         hasGroupedSelected={widgets.some(w => selectedWidgetIds.includes(w.id) && !!w.groupId)}
+        allSelectedLocked={selectedWidgetIds.length > 0 && selectedWidgetIds.every(id => widgets.find(w => w.id === id)?.isLocked)}
         onGroup={handleGroupSelected}
         onUngroupSelected={handleUngroupSelected}
+        onToggleLockSelected={toggleLockSelectedWidgets}
         onSelectAll={selectAllWidgets}
         onClearSelection={clearSelection}
         isDarkMode={isDarkMode}
